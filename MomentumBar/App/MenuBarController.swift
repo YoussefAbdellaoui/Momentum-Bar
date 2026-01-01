@@ -47,8 +47,11 @@ class MenuBarController {
     private func setupPopover() {
         popover.contentSize = NSSize(width: 420, height: 520)
         popover.behavior = .transient
-        popover.animates = true
-        popover.contentViewController = NSHostingController(rootView: PopoverContentView())
+        popover.animates = false  // Disable animations to prevent layout recursion
+
+        let hostingController = NSHostingController(rootView: PopoverContentView())
+        hostingController.view.translatesAutoresizingMaskIntoConstraints = false
+        popover.contentViewController = hostingController
     }
 
     private func configureStatusButton() {
@@ -249,7 +252,10 @@ class MenuBarController {
         if let button = statusItem.button {
             popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
             eventMonitor?.start()
-            NSApp.activate(ignoringOtherApps: true)
+            // Activate after popover layout is complete to avoid layout recursion
+            DispatchQueue.main.async {
+                NSApp.activate(ignoringOtherApps: true)
+            }
         }
     }
 

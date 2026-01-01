@@ -14,6 +14,7 @@ final class CalendarService: ObservableObject {
     static let shared = CalendarService()
 
     private let eventStore = EKEventStore()
+    private var authCheckTimer: Timer?
 
     @Published var authorizationStatus: EKAuthorizationStatus = .notDetermined
     @Published var availableCalendars: [EKCalendar] = []
@@ -22,6 +23,67 @@ final class CalendarService: ObservableObject {
 
     private init() {
         updateAuthorizationStatus()
+        setupNotifications()
+        startAuthorizationMonitoring()
+    }
+
+    deinit {
+        authCheckTimer?.invalidate()
+        NotificationCenter.default.removeObserver(self)
+    }
+
+    // MARK: - Setup
+    private func setupNotifications() {
+        // Listen for calendar store changes (events added/modified/deleted)
+        NotificationCenter.default.addObserver(
+            forName: .EKEventStoreChanged,
+            object: eventStore,
+            queue: .main
+        ) { [weak self] _ in
+            guard let self = self else { return }
+            Task { @MainActor [weak self] in
+                self?.handleCalendarStoreChanged()
+            }
+        }
+    }
+
+    private func startAuthorizationMonitoring() {
+        // Periodically check authorization status when not yet granted
+        // This catches when user grants permission in System Settings
+        authCheckTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] _ in
+            guard let self = self else { return }
+            Task { @MainActor [weak self] in
+                self?.checkAuthorizationChange()
+            }
+        }
+    }
+
+    private func checkAuthorizationChange() {
+        let currentStatus = EKEventStore.authorizationStatus(for: .event)
+        if currentStatus != authorizationStatus {
+            let wasNotAuthorized = authorizationStatus != .fullAccess
+            authorizationStatus = currentStatus
+
+            // If we just got authorized, load calendars and events
+            if wasNotAuthorized && currentStatus == .fullAccess {
+                loadCalendars()
+                fetchUpcomingEvents()
+            }
+        }
+
+        // Stop polling once we have full access
+        if currentStatus == .fullAccess {
+            authCheckTimer?.invalidate()
+            authCheckTimer = nil
+        }
+    }
+
+    private func handleCalendarStoreChanged() {
+        // Refresh data when calendar store changes
+        if authorizationStatus == .fullAccess {
+            loadCalendars()
+            fetchUpcomingEvents()
+        }
     }
 
     // MARK: - Authorization
