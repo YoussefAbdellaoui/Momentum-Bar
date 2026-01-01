@@ -17,6 +17,7 @@ final class StorageService {
     private enum Keys {
         static let timeZones = "com.momentumbar.timeZones"
         static let preferences = "com.momentumbar.preferences"
+        static let groups = "com.momentumbar.groups"
         static let lastCalendarSync = "com.momentumbar.lastCalendarSync"
     }
 
@@ -68,6 +69,29 @@ final class StorageService {
         }
     }
 
+    // MARK: - Groups
+    func saveGroups(_ groups: [TimezoneGroup]) {
+        do {
+            let data = try encoder.encode(groups)
+            defaults.set(data, forKey: Keys.groups)
+        } catch {
+            print("Failed to save groups: \(error)")
+        }
+    }
+
+    func loadGroups() -> [TimezoneGroup] {
+        guard let data = defaults.data(forKey: Keys.groups) else {
+            return []
+        }
+
+        do {
+            return try decoder.decode([TimezoneGroup].self, from: data)
+        } catch {
+            print("Failed to load groups: \(error)")
+            return []
+        }
+    }
+
     // MARK: - Calendar
     func saveLastCalendarSync(_ date: Date) {
         defaults.set(date, forKey: Keys.lastCalendarSync)
@@ -81,6 +105,7 @@ final class StorageService {
     func resetAll() {
         defaults.removeObject(forKey: Keys.timeZones)
         defaults.removeObject(forKey: Keys.preferences)
+        defaults.removeObject(forKey: Keys.groups)
         defaults.removeObject(forKey: Keys.lastCalendarSync)
     }
 
@@ -89,12 +114,14 @@ final class StorageService {
         struct ExportData: Codable {
             let timeZones: [TimeZoneEntry]
             let preferences: AppPreferences
+            let groups: [TimezoneGroup]
             let exportDate: Date
         }
 
         let exportData = ExportData(
             timeZones: loadTimeZones(),
             preferences: loadPreferences(),
+            groups: loadGroups(),
             exportDate: Date()
         )
 
@@ -105,6 +132,7 @@ final class StorageService {
         struct ExportData: Codable {
             let timeZones: [TimeZoneEntry]
             let preferences: AppPreferences
+            let groups: [TimezoneGroup]?
             let exportDate: Date
         }
 
@@ -112,6 +140,9 @@ final class StorageService {
             let importData = try decoder.decode(ExportData.self, from: data)
             saveTimeZones(importData.timeZones)
             savePreferences(importData.preferences)
+            if let groups = importData.groups {
+                saveGroups(groups)
+            }
             return true
         } catch {
             print("Failed to import settings: \(error)")

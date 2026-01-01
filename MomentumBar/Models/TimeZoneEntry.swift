@@ -14,19 +14,22 @@ struct TimeZoneEntry: Identifiable, Codable, Hashable {
     var customName: String?
     var colorHex: String?
     var order: Int
+    var groupID: UUID?
 
     init(
         id: UUID = UUID(),
         identifier: String,
         customName: String? = nil,
         colorHex: String? = nil,
-        order: Int = 0
+        order: Int = 0,
+        groupID: UUID? = nil
     ) {
         self.id = id
         self.identifier = identifier
         self.customName = customName
         self.colorHex = colorHex
         self.order = order
+        self.groupID = groupID
     }
 
     var timeZone: TimeZone? {
@@ -66,6 +69,39 @@ struct TimeZoneEntry: Identifiable, Codable, Hashable {
         guard let hex = colorHex else { return .blue }
         return Color(hex: hex) ?? .blue
     }
+}
+
+// MARK: - Timezone Group
+struct TimezoneGroup: Identifiable, Codable, Hashable {
+    let id: UUID
+    var name: String
+    var colorHex: String
+    var icon: String
+    var order: Int
+
+    init(
+        id: UUID = UUID(),
+        name: String,
+        colorHex: String = "#007AFF",
+        icon: String = "folder",
+        order: Int = 0
+    ) {
+        self.id = id
+        self.name = name
+        self.colorHex = colorHex
+        self.icon = icon
+        self.order = order
+    }
+
+    var color: Color {
+        Color(hex: colorHex) ?? .blue
+    }
+
+    static let defaultGroups: [TimezoneGroup] = [
+        TimezoneGroup(name: "Work", colorHex: "#007AFF", icon: "briefcase", order: 0),
+        TimezoneGroup(name: "Personal", colorHex: "#34C759", icon: "person", order: 1),
+        TimezoneGroup(name: "Clients", colorHex: "#FF9500", icon: "person.2", order: 2)
+    ]
 }
 
 // MARK: - Color Extension for Hex Support

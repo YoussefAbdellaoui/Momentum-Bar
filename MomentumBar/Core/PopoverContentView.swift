@@ -11,6 +11,26 @@ import Combine
 struct PopoverContentView: View {
     @State private var selectedTab = 0
 
+    private func tabIcon(for index: Int) -> String {
+        switch index {
+        case 0: return "clock"
+        case 1: return "globe"
+        case 2: return "arrow.left.arrow.right"
+        case 3: return "calendar"
+        default: return "circle"
+        }
+    }
+
+    private func tabLabel(for index: Int) -> String {
+        switch index {
+        case 0: return "Time Zones"
+        case 1: return "World Clock"
+        case 2: return "Convert"
+        case 3: return "Calendar"
+        default: return ""
+        }
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             // Header
@@ -19,11 +39,25 @@ struct PopoverContentView: View {
             Divider()
 
             // Tab selector
-            Picker("", selection: $selectedTab) {
-                Text("Time Zones").tag(0)
-                Text("Calendar").tag(1)
+            HStack(spacing: 4) {
+                ForEach(0..<4, id: \.self) { index in
+                    Button {
+                        selectedTab = index
+                    } label: {
+                        Image(systemName: tabIcon(for: index))
+                            .font(.system(size: 14))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 6)
+                            .background(
+                                RoundedRectangle(cornerRadius: 6)
+                                    .fill(selectedTab == index ? Color.accentColor.opacity(0.15) : Color.clear)
+                            )
+                            .foregroundStyle(selectedTab == index ? .primary : .secondary)
+                    }
+                    .buttonStyle(.plain)
+                    .help(tabLabel(for: index))
+                }
             }
-            .pickerStyle(.segmented)
             .padding(.horizontal)
             .padding(.vertical, 8)
 
@@ -40,8 +74,14 @@ struct PopoverContentView: View {
                 }
                 .tag(0)
 
-                CalendarTabView()
+                WorldClockView()
                     .tag(1)
+
+                QuickConvertView()
+                    .tag(2)
+
+                CalendarTabView()
+                    .tag(3)
             }
             .tabViewStyle(.automatic)
 
