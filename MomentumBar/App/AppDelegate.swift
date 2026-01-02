@@ -25,9 +25,29 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         setupGlobalHotKeys()
         observePreferences()
 
+        // Show onboarding for first-time users
+        OnboardingWindowController.shared.showOnboardingIfNeeded()
+
         // Validate license at launch
         Task { @MainActor in
             await validateLicense()
+        }
+
+        // Record meeting analytics on app activation
+        NotificationCenter.default.addObserver(
+            forName: NSApplication.didBecomeActiveNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.recordMeetingAnalytics()
+        }
+    }
+
+    // MARK: - Meeting Analytics
+
+    private func recordMeetingAnalytics() {
+        Task { @MainActor in
+            CalendarService.shared.recordCompletedMeetings()
         }
     }
 

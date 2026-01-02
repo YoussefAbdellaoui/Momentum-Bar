@@ -14,6 +14,7 @@ struct SettingsView: View {
         case general
         case timeZones
         case calendar
+        case focus
         case display
         case theme
         case license
@@ -39,6 +40,12 @@ struct SettingsView: View {
                     Label("Calendar", systemImage: "calendar")
                 }
                 .tag(Tabs.calendar)
+
+            FocusSettingsTab()
+                .tabItem {
+                    Label("Focus", systemImage: "moon.fill")
+                }
+                .tag(Tabs.focus)
 
             DisplaySettingsTab()
                 .tabItem {
@@ -195,16 +202,23 @@ struct TimeZoneSettingsTab: View {
                 }
 
                 if showAddGroup {
-                    HStack {
-                        TextField("Group name", text: $newGroupName)
-                            .textFieldStyle(.plain)
-                        Button("Add") {
-                            addGroup()
-                        }
-                        .disabled(newGroupName.isEmpty)
-                        Button("Cancel") {
-                            showAddGroup = false
-                            newGroupName = ""
+                    VStack(alignment: .leading, spacing: 8) {
+                        TextField("Enter group name", text: $newGroupName)
+                            .textFieldStyle(.roundedBorder)
+
+                        HStack {
+                            Button("Add Group") {
+                                addGroup()
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .controlSize(.small)
+                            .disabled(newGroupName.trimmingCharacters(in: .whitespaces).isEmpty)
+
+                            Button("Cancel") {
+                                showAddGroup = false
+                                newGroupName = ""
+                            }
+                            .controlSize(.small)
                         }
                     }
                 } else {
@@ -394,6 +408,256 @@ struct CalendarSettingsTab: View {
         case .notDetermined: return .secondary
         @unknown default: return .secondary
         }
+    }
+}
+
+// MARK: - Focus Settings Tab
+struct FocusSettingsTab: View {
+    @State private var focusService = FocusModeService.shared
+    @State private var showSetupSheet = false
+
+    var body: some View {
+        Form {
+            Section("Focus Mode Status") {
+                HStack {
+                    Image(systemName: focusService.isFocusModeActive ? "moon.fill" : "moon")
+                        .foregroundStyle(focusService.isFocusModeActive ? .purple : .secondary)
+                    Text(focusService.isFocusModeActive ? "Focus Mode Active" : "Focus Mode Inactive")
+                    Spacer()
+                    if focusService.isFocusModeActive, let trigger = focusService.currentTrigger {
+                        Text(trigger.rawValue)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                if focusService.isSetupComplete {
+                    Button(focusService.isFocusModeActive ? "Disable Focus" : "Enable Focus") {
+                        focusService.toggleFocus()
+                    }
+                }
+            }
+
+            Section("Automatic Focus") {
+                Toggle("Enable during Pomodoro work sessions", isOn: Binding(
+                    get: { focusService.settings.enableDuringPomodoro },
+                    set: {
+                        focusService.settings.enableDuringPomodoro = $0
+                        focusService.saveSettings()
+                    }
+                ))
+                .disabled(!focusService.isSetupComplete)
+
+                if focusService.settings.enableDuringPomodoro {
+                    Text("Focus Mode will automatically turn on when you start a Pomodoro work session")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                Toggle("Enable during calendar meetings", isOn: Binding(
+                    get: { focusService.settings.enableDuringMeetings },
+                    set: {
+                        focusService.settings.enableDuringMeetings = $0
+                        focusService.saveSettings()
+                    }
+                ))
+                .disabled(!focusService.isSetupComplete)
+
+                if focusService.settings.enableDuringMeetings {
+                    Text("Focus Mode will automatically turn on during calendar events")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                Toggle("Auto-disable after session ends", isOn: Binding(
+                    get: { focusService.settings.autoDisableAfterSession },
+                    set: {
+                        focusService.settings.autoDisableAfterSession = $0
+                        focusService.saveSettings()
+                    }
+                ))
+                .disabled(!focusService.isSetupComplete)
+            }
+
+            Section("Shortcuts Integration") {
+                if focusService.isSetupComplete {
+                    HStack {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundStyle(.green)
+                        Text("Shortcuts configured")
+                        Spacer()
+                        Button("Reconfigure") {
+                            showSetupSheet = true
+                        }
+                        .buttonStyle(.link)
+                    }
+
+                    TextField("Shortcut Name", text: Binding(
+                        get: { focusService.settings.shortcutName },
+                        set: {
+                            focusService.settings.shortcutName = $0
+                            focusService.saveSettings()
+                        }
+                    ))
+                    .textFieldStyle(.roundedBorder)
+                } else {
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .foregroundStyle(.orange)
+                            Text("Setup Required")
+                                .fontWeight(.medium)
+                        }
+
+                        Text("MomentumBar uses macOS Shortcuts to control Focus Mode. You'll need to create a simple shortcut first.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+
+                        Button("Setup Focus Mode") {
+                            showSetupSheet = true
+                        }
+                        .buttonStyle(.borderedProminent)
+                    }
+                    .padding(.vertical, 4)
+                }
+            }
+        }
+        .formStyle(.grouped)
+        .padding()
+        .sheet(isPresented: $showSetupSheet) {
+            FocusModeSetupSheet(isPresented: $showSetupSheet)
+        }
+    }
+}
+
+// MARK: - Focus Mode Setup Sheet
+struct FocusModeSetupSheet: View {
+    @Binding var isPresented: Bool
+    @State private var focusService = FocusModeService.shared
+    @State private var currentStep = 1
+
+    var body: some View {
+        VStack(spacing: 0) {
+            // Header
+            HStack {
+                Text("Focus Mode Setup")
+                    .font(.headline)
+                Spacer()
+                Button("Cancel") {
+                    isPresented = false
+                }
+                .buttonStyle(.plain)
+            }
+            .padding()
+            .background(Color.primary.opacity(0.05))
+
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    // Progress
+                    HStack(spacing: 4) {
+                        ForEach(1...6, id: \.self) { step in
+                            RoundedRectangle(cornerRadius: 2)
+                                .fill(step <= currentStep ? Color.accentColor : Color.secondary.opacity(0.3))
+                                .frame(height: 4)
+                        }
+                    }
+                    .padding(.top)
+
+                    // Instructions
+                    ForEach(FocusModeService.setupInstructions, id: \.step) { instruction in
+                        SetupStepRow(
+                            step: instruction.step,
+                            title: instruction.title,
+                            description: instruction.description,
+                            isActive: instruction.step == currentStep,
+                            isCompleted: instruction.step < currentStep
+                        )
+                        .onTapGesture {
+                            currentStep = instruction.step
+                        }
+                    }
+
+                    // Shortcut Template
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Shortcut Template")
+                            .font(.headline)
+
+                        Text(FocusModeService.shortcutTemplate)
+                            .font(.system(.caption, design: .monospaced))
+                            .padding()
+                            .background(Color.primary.opacity(0.05))
+                            .cornerRadius(8)
+                    }
+                    .padding(.top)
+                }
+                .padding()
+            }
+
+            // Footer
+            HStack {
+                Button("Open Shortcuts App") {
+                    focusService.openShortcutsApp()
+                }
+
+                Spacer()
+
+                if currentStep < 6 {
+                    Button("Next Step") {
+                        currentStep += 1
+                    }
+                    .buttonStyle(.borderedProminent)
+                } else {
+                    Button("Complete Setup") {
+                        focusService.completeSetup()
+                        isPresented = false
+                    }
+                    .buttonStyle(.borderedProminent)
+                }
+            }
+            .padding()
+            .background(Color.primary.opacity(0.05))
+        }
+        .frame(width: 500, height: 600)
+    }
+}
+
+// MARK: - Setup Step Row
+struct SetupStepRow: View {
+    let step: Int
+    let title: String
+    let description: String
+    let isActive: Bool
+    let isCompleted: Bool
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            ZStack {
+                Circle()
+                    .fill(isCompleted ? Color.green : (isActive ? Color.accentColor : Color.secondary.opacity(0.3)))
+                    .frame(width: 28, height: 28)
+
+                if isCompleted {
+                    Image(systemName: "checkmark")
+                        .font(.caption.bold())
+                        .foregroundStyle(.white)
+                } else {
+                    Text("\(step)")
+                        .font(.caption.bold())
+                        .foregroundStyle(isActive ? .white : .secondary)
+                }
+            }
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .fontWeight(isActive ? .semibold : .regular)
+
+                Text(description)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding(.vertical, 4)
+        .opacity(isCompleted ? 0.6 : 1)
     }
 }
 
