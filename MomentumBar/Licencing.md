@@ -26,7 +26,7 @@ You are a Swift engineer implementing the licensing and anti-abuse system for a 
 - **Support:** Standard email support
 
 ### Tier 3: ENTERPRISE
-- **Price:** $89.99 for 6 seats (one-time), scales to $14.99/seat for 6-10, $12.99/seat for 11-25, custom for 26+
+- **Price:** $64,99 for 6 seats (one-time), scales to $10.99/seat for 6-10, $9.99/seat for 11-25, custom for 26+
 - **Computers:** 1 per seat (multiple seats if needed)
 - **Use Case:** Organizations, remote teams, companies
 - **License Binding:** Seat-based, each seat tied to 1 machine initially

@@ -16,6 +16,7 @@ struct SettingsView: View {
         case calendar
         case display
         case theme
+        case license
         case about
     }
 
@@ -51,13 +52,19 @@ struct SettingsView: View {
                 }
                 .tag(Tabs.theme)
 
+            LicenseSettingsView()
+                .tabItem {
+                    Label("License", systemImage: "key.fill")
+                }
+                .tag(Tabs.license)
+
             AboutTab()
                 .tabItem {
                     Label("About", systemImage: "info.circle")
                 }
                 .tag(Tabs.about)
         }
-        .frame(width: 500, height: 450)
+        .frame(width: 500, height: 500)
     }
 }
 

@@ -15,6 +15,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var hotKeyRefs: [EventHotKeyRef] = []
     private var eventHandler: EventHandlerRef?
     private var cancellables = Set<AnyCancellable>()
+    private var trialExpiredWindow: NSWindow?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Apply dock icon preference
@@ -23,6 +24,43 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         menuBarController = MenuBarController()
         setupGlobalHotKeys()
         observePreferences()
+
+        // Validate license at launch
+        Task { @MainActor in
+            await validateLicense()
+        }
+    }
+
+    // MARK: - License Validation
+
+    @MainActor
+    private func validateLicense() async {
+        let licenseService = LicenseService.shared
+        await licenseService.validateAtLaunch()
+
+        // Check if trial expired and show modal
+        if case .expired = licenseService.currentStatus {
+            showTrialExpiredWindow()
+        }
+    }
+
+    private func showTrialExpiredWindow() {
+        // Create window if it doesn't exist
+        if trialExpiredWindow == nil {
+            let contentView = TrialExpiredView()
+            let hostingController = NSHostingController(rootView: contentView)
+
+            let window = NSWindow(contentViewController: hostingController)
+            window.title = "License Required"
+            window.styleMask = [.titled, .closable]
+            window.isReleasedWhenClosed = false
+            window.center()
+
+            trialExpiredWindow = window
+        }
+
+        trialExpiredWindow?.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {

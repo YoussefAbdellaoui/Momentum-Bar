@@ -17,6 +17,7 @@ struct PopoverContentView: View {
         case 1: return "globe"
         case 2: return "arrow.left.arrow.right"
         case 3: return "calendar"
+        case 4: return "timer"
         default: return "circle"
         }
     }
@@ -27,6 +28,7 @@ struct PopoverContentView: View {
         case 1: return "World Clock"
         case 2: return "Convert"
         case 3: return "Calendar"
+        case 4: return "Pomodoro"
         default: return ""
         }
     }
@@ -40,7 +42,7 @@ struct PopoverContentView: View {
 
             // Tab selector
             HStack(spacing: 4) {
-                ForEach(0..<4, id: \.self) { index in
+                ForEach(0..<5, id: \.self) { index in
                     Button {
                         selectedTab = index
                     } label: {
@@ -82,6 +84,9 @@ struct PopoverContentView: View {
 
                 CalendarTabView()
                     .tag(3)
+
+                PomodoroView()
+                    .tag(4)
             }
             .tabViewStyle(.automatic)
 
