@@ -12,53 +12,56 @@ struct PomodoroView: View {
     @State private var showSettings = false
 
     var body: some View {
-        VStack(spacing: 16) {
-            // Timer Display
-            TimerCircle(
-                progress: pomodoro.progress,
-                timeRemaining: pomodoro.formattedTimeRemaining,
-                state: pomodoro.state
-            )
+        ScrollView {
+            VStack(spacing: 16) {
+                // Timer Display
+                TimerCircle(
+                    progress: pomodoro.progress,
+                    timeRemaining: pomodoro.formattedTimeRemaining,
+                    state: pomodoro.state
+                )
 
-            // Session Info
-            SessionInfoBar(
-                completedSessions: pomodoro.completedSessions,
-                totalToday: pomodoro.totalSessionsToday,
-                sessionsUntilLongBreak: pomodoro.settings.sessionsUntilLongBreak
-            )
+                // Session Info
+                SessionInfoBar(
+                    completedSessions: pomodoro.completedSessions,
+                    totalToday: pomodoro.totalSessionsToday,
+                    sessionsUntilLongBreak: pomodoro.settings.sessionsUntilLongBreak
+                )
 
-            // Controls
-            ControlButtons(
-                state: pomodoro.state,
-                onStart: { pomodoro.start() },
-                onPause: { pomodoro.pause() },
-                onStop: { pomodoro.stop() },
-                onSkip: { pomodoro.skip() }
-            )
+                // Controls
+                ControlButtons(
+                    state: pomodoro.state,
+                    onStart: { pomodoro.start() },
+                    onPause: { pomodoro.pause() },
+                    onStop: { pomodoro.stop() },
+                    onSkip: { pomodoro.skip() }
+                )
 
-            Divider()
-                .padding(.horizontal)
+                Divider()
+                    .padding(.horizontal)
 
-            // Today's Stats
-            TodayStats(
-                focusTime: pomodoro.formattedTodayFocusTime,
-                sessionsCompleted: pomodoro.totalSessionsToday
-            )
+                // Today's Stats
+                TodayStats(
+                    focusTime: pomodoro.formattedTodayFocusTime,
+                    sessionsCompleted: pomodoro.totalSessionsToday
+                )
 
-            // Settings Button
-            Button {
-                showSettings = true
-            } label: {
-                HStack {
-                    Image(systemName: "gearshape")
-                    Text("Timer Settings")
+                // Settings Button
+                Button {
+                    showSettings = true
+                } label: {
+                    HStack {
+                        Image(systemName: "gearshape")
+                        Text("Timer Settings")
+                    }
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
                 }
-                .font(.caption)
-                .foregroundStyle(.secondary)
+                .buttonStyle(.plain)
             }
-            .buttonStyle(.plain)
+            .padding()
+            .padding(.top, 8)
         }
-        .padding()
         .sheet(isPresented: $showSettings) {
             PomodoroSettingsSheet(settings: $pomodoro.settings) {
                 pomodoro.saveSettings()

@@ -253,8 +253,11 @@ struct TimeZoneSettingsTab: View {
     }
 
     private func addGroup() {
+        let trimmedName = newGroupName.trimmingCharacters(in: .whitespaces)
+        guard !trimmedName.isEmpty else { return }
+
         let group = TimezoneGroup(
-            name: newGroupName,
+            name: trimmedName,
             order: appState.groups.count
         )
         appState.groups.append(group)
@@ -913,32 +916,125 @@ struct ThemePreviewCard: View {
 // MARK: - About Tab
 struct AboutTab: View {
     var body: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "clock.fill")
-                .font(.system(size: 64))
-                .foregroundStyle(.blue)
+        ScrollView {
+            VStack(spacing: 20) {
+                // App Icon and Name
+                VStack(spacing: 12) {
+                    Image(systemName: "clock.fill")
+                        .font(.system(size: 64))
+                        .foregroundStyle(.blue)
 
-            Text("MomentumBar")
-                .font(.title)
-                .fontWeight(.bold)
+                    Text("MomentumBar")
+                        .font(.title)
+                        .fontWeight(.bold)
 
-            Text("Version 1.0.0")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+                    Text("Version 1.0.0")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
 
-            Text("A beautiful time zone and calendar manager for your menu bar")
-                .font(.body)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
+                Text("A beautiful time zone and calendar manager for your menu bar")
+                    .font(.body)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal)
+
+                Divider()
+                    .padding(.vertical, 8)
+
+                // Company Info
+                VStack(spacing: 8) {
+                    Text("Developed by")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
+                    Text("Why&Key Group LLC")
+                        .font(.headline)
+
+                    Text("contact@whyandkei.com")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                Divider()
+                    .padding(.vertical, 8)
+
+                // Links
+                VStack(spacing: 12) {
+                    Button {
+                        if let url = URL(string: "https://momentumbar.app") {
+                            NSWorkspace.shared.open(url)
+                        }
+                    } label: {
+                        HStack {
+                            Image(systemName: "globe")
+                            Text("Visit Website")
+                            Spacer()
+                            Image(systemName: "arrow.up.right")
+                                .font(.caption)
+                        }
+                        .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.bordered)
+
+                    Button {
+                        if let url = URL(string: "https://momentumbar.app/contact") {
+                            NSWorkspace.shared.open(url)
+                        }
+                    } label: {
+                        HStack {
+                            Image(systemName: "questionmark.circle")
+                            Text("Support")
+                            Spacer()
+                            Image(systemName: "arrow.up.right")
+                                .font(.caption)
+                        }
+                        .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.bordered)
+
+                    HStack(spacing: 12) {
+                        Button {
+                            if let url = URL(string: "https://momentumbar.app/privacy") {
+                                NSWorkspace.shared.open(url)
+                            }
+                        } label: {
+                            Text("Privacy Policy")
+                                .font(.caption)
+                        }
+                        .buttonStyle(.link)
+
+                        Text("·")
+                            .foregroundStyle(.secondary)
+
+                        Button {
+                            if let url = URL(string: "https://momentumbar.app/terms") {
+                                NSWorkspace.shared.open(url)
+                            }
+                        } label: {
+                            Text("Terms of Service")
+                                .font(.caption)
+                        }
+                        .buttonStyle(.link)
+                    }
+                }
                 .padding(.horizontal)
 
-            Spacer()
+                Spacer()
 
-            Text("Made with love")
-                .font(.caption)
-                .foregroundStyle(.tertiary)
+                // Footer
+                VStack(spacing: 4) {
+                    Text("Made with love for the remote work community")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+
+                    Text("© \(Calendar.current.component(.year, from: Date())) Why&Key Group LLC")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                }
+            }
+            .padding()
         }
-        .padding()
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }

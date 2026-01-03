@@ -66,34 +66,33 @@ struct PopoverContentView: View {
             .padding(.vertical, 8)
 
             // Content based on selected tab
-            TabView(selection: $selectedTab) {
-                VStack(spacing: 0) {
-                    TimeZonesTabView()
+            Group {
+                switch selectedTab {
+                case 0:
+                    VStack(spacing: 0) {
+                        TimeZonesTabView()
 
-                    Divider()
-                        .padding(.top, 8)
+                        Divider()
+                            .padding(.top, 8)
 
-                    TimeScrollerView()
-                        .padding(.vertical, 8)
+                        TimeScrollerView()
+                            .padding(.vertical, 8)
+                    }
+                case 1:
+                    WorldClockView()
+                case 2:
+                    QuickConvertView()
+                case 3:
+                    CalendarTabView()
+                case 4:
+                    PomodoroView()
+                case 5:
+                    MeetingAnalyticsView()
+                default:
+                    EmptyView()
                 }
-                .tag(0)
-
-                WorldClockView()
-                    .tag(1)
-
-                QuickConvertView()
-                    .tag(2)
-
-                CalendarTabView()
-                    .tag(3)
-
-                PomodoroView()
-                    .tag(4)
-
-                MeetingAnalyticsView()
-                    .tag(5)
             }
-            .tabViewStyle(.automatic)
+            .frame(maxHeight: .infinity)
 
             Divider()
 
