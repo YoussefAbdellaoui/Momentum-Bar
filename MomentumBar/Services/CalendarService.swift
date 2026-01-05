@@ -14,14 +14,93 @@ final class CalendarService: ObservableObject {
     static let shared = CalendarService()
 
     private let eventStore = EKEventStore()
+    private var authCheckTimer: Timer?
 
     @Published var authorizationStatus: EKAuthorizationStatus = .notDetermined
     @Published var availableCalendars: [EKCalendar] = []
     @Published var upcomingEvents: [CalendarEvent] = []
     @Published var isLoading = false
+    @Published var overlaps: [MeetingOverlap] = []
+
+    var hasOverlaps: Bool {
+        !overlaps.isEmpty
+    }
+
+    var overlappingEventIDs: Set<String> {
+        Set(overlaps.flatMap { $0.events.map { $0.id } })
+    }
+
+    func isOverlapping(_ event: CalendarEvent) -> Bool {
+        overlappingEventIDs.contains(event.id)
+    }
+
+    func getOverlappingEvents(for event: CalendarEvent) -> [CalendarEvent] {
+        OverlapDetector.overlappingEvents(for: event, in: upcomingEvents)
+    }
 
     private init() {
         updateAuthorizationStatus()
+        setupNotifications()
+        startAuthorizationMonitoring()
+    }
+
+    deinit {
+        authCheckTimer?.invalidate()
+        NotificationCenter.default.removeObserver(self)
+    }
+
+    // MARK: - Setup
+    private func setupNotifications() {
+        // Listen for calendar store changes (events added/modified/deleted)
+        NotificationCenter.default.addObserver(
+            forName: .EKEventStoreChanged,
+            object: eventStore,
+            queue: .main
+        ) { [weak self] _ in
+            guard let self = self else { return }
+            Task { @MainActor [weak self] in
+                self?.handleCalendarStoreChanged()
+            }
+        }
+    }
+
+    private func startAuthorizationMonitoring() {
+        // Periodically check authorization status when not yet granted
+        // This catches when user grants permission in System Settings
+        authCheckTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] _ in
+            guard let self = self else { return }
+            Task { @MainActor [weak self] in
+                self?.checkAuthorizationChange()
+            }
+        }
+    }
+
+    private func checkAuthorizationChange() {
+        let currentStatus = EKEventStore.authorizationStatus(for: .event)
+        if currentStatus != authorizationStatus {
+            let wasNotAuthorized = authorizationStatus != .fullAccess
+            authorizationStatus = currentStatus
+
+            // If we just got authorized, load calendars and events
+            if wasNotAuthorized && currentStatus == .fullAccess {
+                loadCalendars()
+                fetchUpcomingEvents()
+            }
+        }
+
+        // Stop polling once we have full access
+        if currentStatus == .fullAccess {
+            authCheckTimer?.invalidate()
+            authCheckTimer = nil
+        }
+    }
+
+    private func handleCalendarStoreChanged() {
+        // Refresh data when calendar store changes
+        if authorizationStatus == .fullAccess {
+            loadCalendars()
+            fetchUpcomingEvents()
+        }
     }
 
     // MARK: - Authorization
@@ -77,6 +156,7 @@ final class CalendarService: ObservableObject {
             .sorted { $0.startDate < $1.startDate }
 
         upcomingEvents = ekEvents.map { CalendarEvent(from: $0) }
+        overlaps = OverlapDetector.findOverlaps(in: upcomingEvents)
         isLoading = false
     }
 
@@ -95,7 +175,18 @@ final class CalendarService: ObservableObject {
         let ekEvents = eventStore.events(matching: predicate)
             .sorted { $0.startDate < $1.startDate }
 
-        return ekEvents.map { CalendarEvent(from: $0) }
+        let events = ekEvents.map { CalendarEvent(from: $0) }
+
+        // Record completed meetings for analytics
+        MeetingAnalyticsService.shared.recordMeetings(from: events.filter { $0.isPast })
+
+        return events
+    }
+
+    /// Record analytics for completed events
+    func recordCompletedMeetings() {
+        let recentEvents = fetchRecentEvents(hours: 24)
+        MeetingAnalyticsService.shared.recordMeetings(from: recentEvents.filter { $0.isPast })
     }
 
     // MARK: - Refresh

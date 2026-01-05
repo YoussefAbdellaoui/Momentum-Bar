@@ -21,6 +21,30 @@ final class AppState {
         }
     }
 
+    // MARK: - Timezone Groups
+    var groups: [TimezoneGroup] = [] {
+        didSet {
+            StorageService.shared.saveGroups(groups)
+        }
+    }
+
+    var selectedGroupID: UUID? = nil
+
+    var filteredTimeZones: [TimeZoneEntry] {
+        guard let groupID = selectedGroupID else {
+            return timeZones
+        }
+        return timeZones.filter { $0.groupID == groupID }
+    }
+
+    var ungroupedTimeZones: [TimeZoneEntry] {
+        timeZones.filter { $0.groupID == nil }
+    }
+
+    func timeZones(for group: TimezoneGroup) -> [TimeZoneEntry] {
+        timeZones.filter { $0.groupID == group.id }
+    }
+
     // MARK: - Preferences
     var preferences: AppPreferences = .default {
         didSet {
@@ -63,6 +87,7 @@ final class AppState {
     private func loadSavedData() {
         timeZones = StorageService.shared.loadTimeZones()
         preferences = StorageService.shared.loadPreferences()
+        groups = StorageService.shared.loadGroups()
 
         // Add local timezone if no timezones saved
         if timeZones.isEmpty {
@@ -139,10 +164,20 @@ final class AppState {
         let formatter = DateFormatter()
         formatter.timeZone = zone
 
+        let separator = preferences.timeSeparator.rawValue
+
         if preferences.use24HourFormat {
-            formatter.dateFormat = preferences.showSeconds ? "HH:mm:ss" : "HH:mm"
+            if preferences.showSeconds {
+                formatter.dateFormat = "HH'\(separator)'mm'\(separator)'ss"
+            } else {
+                formatter.dateFormat = "HH'\(separator)'mm"
+            }
         } else {
-            formatter.dateFormat = preferences.showSeconds ? "h:mm:ss a" : "h:mm a"
+            if preferences.showSeconds {
+                formatter.dateFormat = "h'\(separator)'mm'\(separator)'ss a"
+            } else {
+                formatter.dateFormat = "h'\(separator)'mm a"
+            }
         }
 
         return formatter.string(from: displayTime)
@@ -159,12 +194,23 @@ final class AppState {
     // MARK: - Day/Night Detection
     func isDaytime(for zone: TimeZone, at time: Date? = nil) -> Bool {
         let displayTime = time ?? currentTime
+
+        // Use accurate sunrise/sunset if enabled
+        if preferences.useAccurateSunriseSunset {
+            return SunriseSunsetService.shared.isDaytime(for: zone, at: displayTime)
+        }
+
+        // Fallback to simple approximation: 6 AM - 6 PM is daytime
         let calendar = Calendar.current
         let components = calendar.dateComponents(in: zone, from: displayTime)
         let hour = components.hour ?? 12
-
-        // Simple approximation: 6 AM - 6 PM is daytime
         return hour >= 6 && hour < 18
+    }
+
+    /// Get sunrise and sunset times for a timezone
+    func getSunriseSunset(for zone: TimeZone, on date: Date? = nil) -> (sunrise: Date, sunset: Date)? {
+        let displayDate = date ?? currentTime
+        return SunriseSunsetService.shared.getSunriseSunset(for: zone, on: displayDate)
     }
 
     var awakeCount: Int {

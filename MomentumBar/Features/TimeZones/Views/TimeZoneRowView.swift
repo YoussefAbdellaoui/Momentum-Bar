@@ -43,10 +43,10 @@ struct TimeZoneRowView: View {
             Spacer()
 
             // Current time
-            VStack(alignment: .trailing, spacing: 2) {
+            VStack(alignment: appState.preferences.timeAlignment.alignment, spacing: 2) {
                 Text(formattedTime)
-                    .font(.system(.title3, design: .monospaced))
-                    .fontWeight(.medium)
+                    .font(timeFont)
+                    .fontWeight(appState.preferences.fontWeight.weight)
 
                 if showDate {
                     Text(formattedDate)
@@ -85,22 +85,36 @@ struct TimeZoneRowView: View {
         let zoneDate = appState.formattedDate(for: tz)
         return localDate != zoneDate
     }
+
+    private var timeFont: Font {
+        let fontFamily = appState.preferences.fontFamily
+        if let fontName = fontFamily.fontName {
+            return .custom(fontName, size: 17)
+        } else {
+            return .system(.title3, design: .monospaced)
+        }
+    }
 }
 
 // MARK: - Day/Night Indicator
 struct DayNightIndicator: View {
     let isDaytime: Bool
+    @State private var themeManager = ThemeManager.shared
 
     var body: some View {
         ZStack {
             Circle()
-                .fill(isDaytime ? Color.yellow.opacity(0.2) : Color.indigo.opacity(0.2))
+                .fill(indicatorColor.opacity(0.2))
                 .frame(width: 28, height: 28)
 
             Image(systemName: isDaytime ? "sun.max.fill" : "moon.fill")
                 .font(.system(size: 14))
-                .foregroundStyle(isDaytime ? .yellow : .indigo)
+                .foregroundStyle(indicatorColor)
         }
+    }
+
+    private var indicatorColor: Color {
+        isDaytime ? themeManager.currentTheme.daytimeColor : themeManager.currentTheme.nighttimeColor
     }
 }
 

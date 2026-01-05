@@ -84,6 +84,68 @@ struct CalendarEvent: Identifiable {
         }
         return nil
     }
+
+    var durationMinutes: Int {
+        Int(endDate.timeIntervalSince(startDate) / 60)
+    }
+
+    func overlaps(with other: CalendarEvent) -> Bool {
+        guard id != other.id else { return false }
+        guard !isAllDay && !other.isAllDay else { return false }
+        return startDate < other.endDate && endDate > other.startDate
+    }
+}
+
+// MARK: - Meeting Overlap
+struct MeetingOverlap: Identifiable {
+    let id = UUID()
+    let events: [CalendarEvent]
+    let overlapStart: Date
+    let overlapEnd: Date
+
+    var overlapDuration: TimeInterval {
+        overlapEnd.timeIntervalSince(overlapStart)
+    }
+
+    var overlapMinutes: Int {
+        Int(overlapDuration / 60)
+    }
+}
+
+// MARK: - Overlap Detection
+struct OverlapDetector {
+    static func findOverlaps(in events: [CalendarEvent]) -> [MeetingOverlap] {
+        var overlaps: [MeetingOverlap] = []
+        let nonAllDayEvents = events.filter { !$0.isAllDay }
+
+        for i in 0..<nonAllDayEvents.count {
+            for j in (i + 1)..<nonAllDayEvents.count {
+                let event1 = nonAllDayEvents[i]
+                let event2 = nonAllDayEvents[j]
+
+                if event1.overlaps(with: event2) {
+                    let overlapStart = max(event1.startDate, event2.startDate)
+                    let overlapEnd = min(event1.endDate, event2.endDate)
+
+                    overlaps.append(MeetingOverlap(
+                        events: [event1, event2],
+                        overlapStart: overlapStart,
+                        overlapEnd: overlapEnd
+                    ))
+                }
+            }
+        }
+
+        return overlaps
+    }
+
+    static func hasOverlap(_ event: CalendarEvent, in events: [CalendarEvent]) -> Bool {
+        events.contains { $0.overlaps(with: event) }
+    }
+
+    static func overlappingEvents(for event: CalendarEvent, in events: [CalendarEvent]) -> [CalendarEvent] {
+        events.filter { $0.overlaps(with: event) }
+    }
 }
 
 // MARK: - CGColor Extension
@@ -109,6 +171,7 @@ struct MeetingLink {
         case googleMeet = "Google Meet"
         case teams = "Microsoft Teams"
         case webex = "Webex"
+        case slack = "Slack Huddle"
         case unknown = "Meeting"
 
         var iconName: String {
@@ -117,6 +180,7 @@ struct MeetingLink {
             case .googleMeet: return "video.fill"
             case .teams: return "person.3.fill"
             case .webex: return "video.fill"
+            case .slack: return "bubble.left.and.bubble.right.fill"
             case .unknown: return "link"
             }
         }
@@ -145,6 +209,11 @@ struct MeetingLinkParser {
         options: .caseInsensitive
     )
 
+    private static let slackPattern = try! NSRegularExpression(
+        pattern: #"https?://(?:app\.)?slack\.com/huddle/[\w/-]+"#,
+        options: .caseInsensitive
+    )
+
     static func extractMeetingLink(from text: String) -> MeetingLink? {
         let range = NSRange(text.startIndex..., in: text)
 
@@ -152,7 +221,8 @@ struct MeetingLinkParser {
             (zoomPattern, .zoom),
             (meetPattern, .googleMeet),
             (teamsPattern, .teams),
-            (webexPattern, .webex)
+            (webexPattern, .webex),
+            (slackPattern, .slack)
         ]
 
         for (regex, platform) in patterns {
@@ -178,6 +248,8 @@ struct MeetingLinkParser {
             return MeetingLink(url: url, platform: .teams)
         } else if urlString.contains("webex.com") {
             return MeetingLink(url: url, platform: .webex)
+        } else if urlString.contains("slack.com/huddle") {
+            return MeetingLink(url: url, platform: .slack)
         }
 
         return nil

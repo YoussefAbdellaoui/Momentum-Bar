@@ -136,12 +136,21 @@ struct CalendarView: View {
     private var eventsList: some View {
         ScrollView {
             LazyVStack(spacing: 8) {
+                // Overlap warning banner
+                if calendarService.hasOverlaps {
+                    OverlapWarningBanner(overlapCount: calendarService.overlaps.count)
+                }
+
                 // Ongoing events
                 let ongoingEvents = calendarService.upcomingEvents.filter { $0.isOngoing }
                 if !ongoingEvents.isEmpty {
                     Section {
                         ForEach(ongoingEvents) { event in
-                            EventRowView(event: event)
+                            EventRowView(
+                                event: event,
+                                isOverlapping: calendarService.isOverlapping(event),
+                                overlappingEvents: calendarService.getOverlappingEvents(for: event)
+                            )
                         }
                     } header: {
                         SectionHeader(title: "Now")
@@ -153,7 +162,11 @@ struct CalendarView: View {
                 if !upcomingEvents.isEmpty {
                     Section {
                         ForEach(upcomingEvents) { event in
-                            EventRowView(event: event)
+                            EventRowView(
+                                event: event,
+                                isOverlapping: calendarService.isOverlapping(event),
+                                overlappingEvents: calendarService.getOverlappingEvents(for: event)
+                            )
                         }
                     } header: {
                         SectionHeader(title: "Upcoming")
@@ -166,72 +179,166 @@ struct CalendarView: View {
     }
 }
 
+// MARK: - Overlap Warning Banner
+struct OverlapWarningBanner: View {
+    let overlapCount: Int
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .foregroundStyle(.orange)
+
+            Text("\(overlapCount) scheduling \(overlapCount == 1 ? "conflict" : "conflicts") detected")
+                .font(.caption)
+                .fontWeight(.medium)
+
+            Spacer()
+        }
+        .padding(10)
+        .background(Color.orange.opacity(0.1))
+        .cornerRadius(8)
+        .overlay(
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(Color.orange.opacity(0.3), lineWidth: 1)
+        )
+    }
+}
+
 // MARK: - Event Row View
 struct EventRowView: View {
     let event: CalendarEvent
+    var isOverlapping: Bool = false
+    var overlappingEvents: [CalendarEvent] = []
+
+    @State private var showOverlapDetails = false
 
     var body: some View {
-        HStack(spacing: 12) {
-            // Calendar color indicator
-            RoundedRectangle(cornerRadius: 2)
-                .fill(Color(hex: event.calendarColorHex) ?? .blue)
-                .frame(width: 4)
+        VStack(spacing: 0) {
+            HStack(spacing: 12) {
+                // Calendar color indicator with overlap warning
+                ZStack(alignment: .top) {
+                    RoundedRectangle(cornerRadius: 2)
+                        .fill(Color(hex: event.calendarColorHex) ?? .blue)
+                        .frame(width: 4)
 
-            VStack(alignment: .leading, spacing: 4) {
-                // Title
-                Text(event.title)
-                    .font(.body)
-                    .fontWeight(.medium)
-                    .lineLimit(1)
-
-                // Time
-                HStack(spacing: 4) {
-                    Image(systemName: "clock")
-                        .font(.caption2)
-
-                    Text(event.timeRange)
-                        .font(.caption)
-                }
-                .foregroundStyle(.secondary)
-
-                // Progress bar for ongoing events
-                if event.isOngoing {
-                    ProgressView(value: event.progress)
-                        .tint(.blue)
-                }
-            }
-
-            Spacer()
-
-            // Meeting link button
-            if let meetingLink = event.meetingLink {
-                Button {
-                    NSWorkspace.shared.open(meetingLink.url)
-                } label: {
-                    HStack(spacing: 4) {
-                        Image(systemName: meetingLink.platform.iconName)
-                        Text("Join")
+                    if isOverlapping {
+                        Circle()
+                            .fill(.orange)
+                            .frame(width: 8, height: 8)
+                            .offset(x: 0, y: -2)
                     }
-                    .font(.caption)
                 }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.small)
-            }
 
-            // Time until event
-            if event.isUpcoming && event.minutesUntilStart <= 60 {
-                Text("in \(event.minutesUntilStart)m")
-                    .font(.caption)
-                    .foregroundStyle(.orange)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(Color.orange.opacity(0.1))
-                    .cornerRadius(6)
+                VStack(alignment: .leading, spacing: 4) {
+                    // Title row with overlap indicator
+                    HStack(spacing: 6) {
+                        Text(event.title)
+                            .font(.body)
+                            .fontWeight(.medium)
+                            .lineLimit(1)
+
+                        if isOverlapping {
+                            Button {
+                                showOverlapDetails.toggle()
+                            } label: {
+                                Image(systemName: "exclamationmark.triangle.fill")
+                                    .font(.caption)
+                                    .foregroundStyle(.orange)
+                            }
+                            .buttonStyle(.plain)
+                            .help("Scheduling conflict")
+                        }
+                    }
+
+                    // Time
+                    HStack(spacing: 4) {
+                        Image(systemName: "clock")
+                            .font(.caption2)
+
+                        Text(event.timeRange)
+                            .font(.caption)
+                    }
+                    .foregroundStyle(.secondary)
+
+                    // Progress bar for ongoing events
+                    if event.isOngoing {
+                        ProgressView(value: event.progress)
+                            .tint(.blue)
+                    }
+                }
+
+                Spacer()
+
+                // Meeting link button
+                if let meetingLink = event.meetingLink {
+                    Button {
+                        NSWorkspace.shared.open(meetingLink.url)
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: meetingLink.platform.iconName)
+                            Text("Join")
+                        }
+                        .font(.caption)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.small)
+                }
+
+                // Time until event
+                if event.isUpcoming && event.minutesUntilStart <= 60 {
+                    Text("in \(event.minutesUntilStart)m")
+                        .font(.caption)
+                        .foregroundStyle(.orange)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(Color.orange.opacity(0.1))
+                        .cornerRadius(6)
+                }
+            }
+            .padding(10)
+
+            // Overlap details expandable section
+            if showOverlapDetails && !overlappingEvents.isEmpty {
+                VStack(alignment: .leading, spacing: 6) {
+                    Divider()
+
+                    Text("Conflicts with:")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 10)
+
+                    ForEach(overlappingEvents) { conflictEvent in
+                        HStack(spacing: 8) {
+                            RoundedRectangle(cornerRadius: 2)
+                                .fill(Color(hex: conflictEvent.calendarColorHex) ?? .blue)
+                                .frame(width: 3, height: 20)
+
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(conflictEvent.title)
+                                    .font(.caption)
+                                    .fontWeight(.medium)
+                                    .lineLimit(1)
+
+                                Text(conflictEvent.timeRange)
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            }
+
+                            Spacer()
+                        }
+                        .padding(.horizontal, 10)
+                    }
+                }
+                .padding(.bottom, 10)
+                .background(Color.orange.opacity(0.05))
             }
         }
-        .padding(10)
-        .background(Color.primary.opacity(0.03))
+        .background(isOverlapping ? Color.orange.opacity(0.05) : Color.primary.opacity(0.03))
         .cornerRadius(8)
+        .overlay(
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(isOverlapping ? Color.orange.opacity(0.3) : Color.clear, lineWidth: 1)
+        )
     }
 }
 

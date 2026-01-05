@@ -11,6 +11,30 @@ import Combine
 struct PopoverContentView: View {
     @State private var selectedTab = 0
 
+    private func tabIcon(for index: Int) -> String {
+        switch index {
+        case 0: return "clock"
+        case 1: return "globe"
+        case 2: return "arrow.left.arrow.right"
+        case 3: return "calendar"
+        case 4: return "timer"
+        case 5: return "chart.bar"
+        default: return "circle"
+        }
+    }
+
+    private func tabLabel(for index: Int) -> String {
+        switch index {
+        case 0: return "Time Zones"
+        case 1: return "World Clock"
+        case 2: return "Convert"
+        case 3: return "Calendar"
+        case 4: return "Pomodoro"
+        case 5: return "Analytics"
+        default: return ""
+        }
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             // Header
@@ -19,31 +43,56 @@ struct PopoverContentView: View {
             Divider()
 
             // Tab selector
-            Picker("", selection: $selectedTab) {
-                Text("Time Zones").tag(0)
-                Text("Calendar").tag(1)
+            HStack(spacing: 4) {
+                ForEach(0..<6, id: \.self) { index in
+                    Button {
+                        selectedTab = index
+                    } label: {
+                        Image(systemName: tabIcon(for: index))
+                            .font(.system(size: 14))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 6)
+                            .background(
+                                RoundedRectangle(cornerRadius: 6)
+                                    .fill(selectedTab == index ? Color.accentColor.opacity(0.15) : Color.clear)
+                            )
+                            .foregroundStyle(selectedTab == index ? .primary : .secondary)
+                    }
+                    .buttonStyle(.plain)
+                    .help(tabLabel(for: index))
+                }
             }
-            .pickerStyle(.segmented)
             .padding(.horizontal)
             .padding(.vertical, 8)
 
             // Content based on selected tab
-            TabView(selection: $selectedTab) {
-                VStack(spacing: 0) {
-                    TimeZonesTabView()
+            Group {
+                switch selectedTab {
+                case 0:
+                    VStack(spacing: 0) {
+                        TimeZonesTabView()
 
-                    Divider()
-                        .padding(.top, 8)
+                        Divider()
+                            .padding(.top, 8)
 
-                    TimeScrollerView()
-                        .padding(.vertical, 8)
+                        TimeScrollerView()
+                            .padding(.vertical, 8)
+                    }
+                case 1:
+                    WorldClockView()
+                case 2:
+                    QuickConvertView()
+                case 3:
+                    CalendarTabView()
+                case 4:
+                    PomodoroView()
+                case 5:
+                    MeetingAnalyticsView()
+                default:
+                    EmptyView()
                 }
-                .tag(0)
-
-                CalendarTabView()
-                    .tag(1)
             }
-            .tabViewStyle(.automatic)
+            .frame(maxHeight: .infinity)
 
             Divider()
 
