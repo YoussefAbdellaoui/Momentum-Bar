@@ -148,6 +148,79 @@ struct OverlapDetector {
     }
 }
 
+// MARK: - Buffer Time Warning
+struct BufferWarning: Identifiable {
+    let id = UUID()
+    let previousEvent: CalendarEvent
+    let nextEvent: CalendarEvent
+    let bufferMinutes: Int
+
+    var isBackToBack: Bool {
+        bufferMinutes == 0
+    }
+
+    var warningMessage: String {
+        if isBackToBack {
+            return "Back-to-back with \(nextEvent.title)"
+        } else {
+            return "Only \(bufferMinutes)m before \(nextEvent.title)"
+        }
+    }
+}
+
+// MARK: - Buffer Detection
+struct BufferDetector {
+    /// Find all events that have insufficient buffer time before the next meeting
+    static func findBufferWarnings(in events: [CalendarEvent], minimumBufferMinutes: Int) -> [String: BufferWarning] {
+        var warnings: [String: BufferWarning] = [:]
+        let nonAllDayEvents = events.filter { !$0.isAllDay && !$0.isPast }
+            .sorted { $0.startDate < $1.startDate }
+
+        for i in 0..<nonAllDayEvents.count {
+            let currentEvent = nonAllDayEvents[i]
+
+            // Find the next event that starts after this one ends
+            for j in (i + 1)..<nonAllDayEvents.count {
+                let nextEvent = nonAllDayEvents[j]
+
+                // Skip if events overlap (handled by overlap detector)
+                if currentEvent.overlaps(with: nextEvent) {
+                    continue
+                }
+
+                // Calculate buffer time between events
+                let bufferSeconds = nextEvent.startDate.timeIntervalSince(currentEvent.endDate)
+                let bufferMinutes = Int(bufferSeconds / 60)
+
+                // If there's insufficient buffer, add a warning
+                if bufferMinutes >= 0 && bufferMinutes < minimumBufferMinutes {
+                    let warning = BufferWarning(
+                        previousEvent: currentEvent,
+                        nextEvent: nextEvent,
+                        bufferMinutes: bufferMinutes
+                    )
+                    warnings[currentEvent.id] = warning
+                }
+
+                // Only check the immediately next non-overlapping event
+                break
+            }
+        }
+
+        return warnings
+    }
+
+    /// Get buffer warning for a specific event (if any)
+    static func bufferWarning(for event: CalendarEvent, in warnings: [String: BufferWarning]) -> BufferWarning? {
+        warnings[event.id]
+    }
+
+    /// Check if an event has a buffer warning
+    static func hasBufferWarning(_ event: CalendarEvent, in warnings: [String: BufferWarning]) -> Bool {
+        warnings[event.id] != nil
+    }
+}
+
 // MARK: - CGColor Extension
 extension CGColor {
     func toHex() -> String {

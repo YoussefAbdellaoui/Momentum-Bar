@@ -9,8 +9,12 @@ import SwiftUI
 import EventKit
 
 struct CalendarView: View {
-    @State private var calendarService = CalendarService.shared
+    @StateObject private var calendarService = CalendarService.shared
     @State private var appState = AppState.shared
+    @State private var showingEventEditor = false
+    @State private var showingQuickCreator = false
+    @State private var showingICSManager = false
+    @State private var editingEvent: CalendarEvent?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -28,6 +32,9 @@ struct CalendarView: View {
                     eventsList
                 }
 
+                // Bottom toolbar
+                calendarToolbar
+
             @unknown default:
                 requestAccessView
             }
@@ -38,6 +45,76 @@ struct CalendarView: View {
                 calendarService.refresh()
             }
         }
+        .sheet(isPresented: $showingEventEditor) {
+            EventEditorView(mode: .create, isPresented: $showingEventEditor)
+        }
+        .sheet(isPresented: $showingQuickCreator) {
+            QuickEventCreator(isPresented: $showingQuickCreator)
+        }
+        .sheet(isPresented: $showingICSManager) {
+            ICSManagerView(isPresented: $showingICSManager)
+        }
+        .sheet(item: $editingEvent) { event in
+            EventEditorView(mode: .edit(event), isPresented: .init(
+                get: { editingEvent != nil },
+                set: { if !$0 { editingEvent = nil } }
+            ))
+        }
+    }
+
+    // MARK: - Delete Event
+    private func deleteEvent(_ event: CalendarEvent) {
+        do {
+            try calendarService.deleteEvent(event)
+        } catch {
+            print("Failed to delete event: \(error)")
+        }
+    }
+
+    // MARK: - Calendar Toolbar
+    private var calendarToolbar: some View {
+        HStack(spacing: 12) {
+            // Quick create button
+            Button {
+                showingQuickCreator = true
+            } label: {
+                HStack(spacing: 4) {
+                    Image(systemName: "plus.circle.fill")
+                    Text("Quick Event")
+                }
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(.blue)
+
+            Spacer()
+
+            // More options menu
+            Menu {
+                Button {
+                    showingEventEditor = true
+                } label: {
+                    Label("New Event...", systemImage: "calendar.badge.plus")
+                }
+
+                Divider()
+
+                Button {
+                    showingICSManager = true
+                } label: {
+                    Label("Import / Export...", systemImage: "arrow.up.arrow.down")
+                }
+            } label: {
+                Image(systemName: "ellipsis.circle")
+                    .font(.body)
+                    .foregroundStyle(.secondary)
+            }
+            .menuStyle(.borderlessButton)
+            .menuIndicator(.hidden)
+            .frame(width: 24)
+        }
+        .padding(.horizontal)
+        .padding(.vertical, 8)
+        .background(Color.primary.opacity(0.02))
     }
 
     // MARK: - Request Access View
@@ -136,9 +213,13 @@ struct CalendarView: View {
     private var eventsList: some View {
         ScrollView {
             LazyVStack(spacing: 8) {
-                // Overlap warning banner
+                // Warning banners
                 if calendarService.hasOverlaps {
                     OverlapWarningBanner(overlapCount: calendarService.overlaps.count)
+                }
+
+                if calendarService.hasBufferWarnings {
+                    BufferWarningBanner(warningCount: calendarService.bufferWarningCount)
                 }
 
                 // Ongoing events
@@ -149,7 +230,10 @@ struct CalendarView: View {
                             EventRowView(
                                 event: event,
                                 isOverlapping: calendarService.isOverlapping(event),
-                                overlappingEvents: calendarService.getOverlappingEvents(for: event)
+                                overlappingEvents: calendarService.getOverlappingEvents(for: event),
+                                bufferWarning: calendarService.getBufferWarning(for: event),
+                                onEdit: { editingEvent = event },
+                                onDelete: { deleteEvent(event) }
                             )
                         }
                     } header: {
@@ -165,7 +249,10 @@ struct CalendarView: View {
                             EventRowView(
                                 event: event,
                                 isOverlapping: calendarService.isOverlapping(event),
-                                overlappingEvents: calendarService.getOverlappingEvents(for: event)
+                                overlappingEvents: calendarService.getOverlappingEvents(for: event),
+                                bufferWarning: calendarService.getBufferWarning(for: event),
+                                onEdit: { editingEvent = event },
+                                onDelete: { deleteEvent(event) }
                             )
                         }
                     } header: {
@@ -204,18 +291,69 @@ struct OverlapWarningBanner: View {
     }
 }
 
+// MARK: - Buffer Warning Banner
+struct BufferWarningBanner: View {
+    let warningCount: Int
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "clock.badge.exclamationmark")
+                .foregroundStyle(.purple)
+
+            Text("\(warningCount) back-to-back \(warningCount == 1 ? "meeting" : "meetings") - no buffer time")
+                .font(.caption)
+                .fontWeight(.medium)
+
+            Spacer()
+        }
+        .padding(10)
+        .background(Color.purple.opacity(0.1))
+        .cornerRadius(8)
+        .overlay(
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(Color.purple.opacity(0.3), lineWidth: 1)
+        )
+    }
+}
+
 // MARK: - Event Row View
 struct EventRowView: View {
     let event: CalendarEvent
     var isOverlapping: Bool = false
     var overlappingEvents: [CalendarEvent] = []
+    var bufferWarning: BufferWarning? = nil
+    var onEdit: (() -> Void)? = nil
+    var onDelete: (() -> Void)? = nil
 
     @State private var showOverlapDetails = false
+    @State private var showBufferDetails = false
+    @State private var showDeleteConfirmation = false
+    @State private var isHovering = false
+
+    private var hasBufferWarning: Bool {
+        bufferWarning != nil
+    }
+
+    private var hasAnyWarning: Bool {
+        isOverlapping || hasBufferWarning
+    }
+
+    private var borderColor: Color {
+        if isOverlapping { return .orange }
+        if hasBufferWarning { return .purple }
+        return .clear
+    }
+
+    private var backgroundColor: Color {
+        if isOverlapping { return Color.orange.opacity(0.05) }
+        if hasBufferWarning { return Color.purple.opacity(0.05) }
+        return Color.primary.opacity(0.03)
+    }
 
     var body: some View {
         VStack(spacing: 0) {
             HStack(spacing: 12) {
-                // Calendar color indicator with overlap warning
+                // Calendar color indicator with warning badges
                 ZStack(alignment: .top) {
                     RoundedRectangle(cornerRadius: 2)
                         .fill(Color(hex: event.calendarColorHex) ?? .blue)
@@ -226,11 +364,16 @@ struct EventRowView: View {
                             .fill(.orange)
                             .frame(width: 8, height: 8)
                             .offset(x: 0, y: -2)
+                    } else if hasBufferWarning {
+                        Circle()
+                            .fill(.purple)
+                            .frame(width: 8, height: 8)
+                            .offset(x: 0, y: -2)
                     }
                 }
 
                 VStack(alignment: .leading, spacing: 4) {
-                    // Title row with overlap indicator
+                    // Title row with warning indicators
                     HStack(spacing: 6) {
                         Text(event.title)
                             .font(.body)
@@ -247,6 +390,18 @@ struct EventRowView: View {
                             }
                             .buttonStyle(.plain)
                             .help("Scheduling conflict")
+                        }
+
+                        if hasBufferWarning {
+                            Button {
+                                showBufferDetails.toggle()
+                            } label: {
+                                Image(systemName: "clock.badge.exclamationmark")
+                                    .font(.caption)
+                                    .foregroundStyle(.purple)
+                            }
+                            .buttonStyle(.plain)
+                            .help("No buffer time")
                         }
                     }
 
@@ -294,6 +449,36 @@ struct EventRowView: View {
                         .background(Color.orange.opacity(0.1))
                         .cornerRadius(6)
                 }
+
+                // Action buttons (visible on hover)
+                if isHovering {
+                    HStack(spacing: 4) {
+                        if let onEdit = onEdit {
+                            Button {
+                                onEdit()
+                            } label: {
+                                Image(systemName: "pencil")
+                                    .font(.caption)
+                            }
+                            .buttonStyle(.plain)
+                            .foregroundStyle(.secondary)
+                            .help("Edit event")
+                        }
+
+                        if onDelete != nil {
+                            Button {
+                                showDeleteConfirmation = true
+                            } label: {
+                                Image(systemName: "trash")
+                                    .font(.caption)
+                            }
+                            .buttonStyle(.plain)
+                            .foregroundStyle(.red.opacity(0.8))
+                            .help("Delete event")
+                        }
+                    }
+                    .padding(.leading, 4)
+                }
             }
             .padding(10)
 
@@ -332,13 +517,95 @@ struct EventRowView: View {
                 .padding(.bottom, 10)
                 .background(Color.orange.opacity(0.05))
             }
+
+            // Buffer warning details expandable section
+            if showBufferDetails, let warning = bufferWarning {
+                VStack(alignment: .leading, spacing: 6) {
+                    Divider()
+
+                    HStack(spacing: 6) {
+                        Image(systemName: warning.isBackToBack ? "bolt.fill" : "timer")
+                            .font(.caption)
+                            .foregroundStyle(.purple)
+
+                        Text(warning.warningMessage)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.horizontal, 10)
+
+                    HStack(spacing: 8) {
+                        RoundedRectangle(cornerRadius: 2)
+                            .fill(Color(hex: warning.nextEvent.calendarColorHex) ?? .blue)
+                            .frame(width: 3, height: 20)
+
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(warning.nextEvent.title)
+                                .font(.caption)
+                                .fontWeight(.medium)
+                                .lineLimit(1)
+
+                            Text(warning.nextEvent.timeRange)
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+
+                        Spacer()
+                    }
+                    .padding(.horizontal, 10)
+                }
+                .padding(.bottom, 10)
+                .background(Color.purple.opacity(0.05))
+            }
         }
-        .background(isOverlapping ? Color.orange.opacity(0.05) : Color.primary.opacity(0.03))
+        .background(backgroundColor)
         .cornerRadius(8)
         .overlay(
             RoundedRectangle(cornerRadius: 8)
-                .stroke(isOverlapping ? Color.orange.opacity(0.3) : Color.clear, lineWidth: 1)
+                .stroke(borderColor.opacity(0.3), lineWidth: hasAnyWarning ? 1 : 0)
         )
+        .onHover { hovering in
+            isHovering = hovering
+        }
+        .contextMenu {
+            if let onEdit = onEdit {
+                Button {
+                    onEdit()
+                } label: {
+                    Label("Edit Event", systemImage: "pencil")
+                }
+            }
+
+            if let meetingLink = event.meetingLink {
+                Button {
+                    NSWorkspace.shared.open(meetingLink.url)
+                } label: {
+                    Label("Join \(meetingLink.platform.rawValue)", systemImage: "video")
+                }
+            }
+
+            Divider()
+
+            if let onDelete = onDelete {
+                Button(role: .destructive) {
+                    showDeleteConfirmation = true
+                } label: {
+                    Label("Delete Event", systemImage: "trash")
+                }
+            }
+        }
+        .confirmationDialog(
+            "Delete Event",
+            isPresented: $showDeleteConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("Delete", role: .destructive) {
+                onDelete?()
+            }
+            Button("Cancel", role: .cancel) { }
+        } message: {
+            Text("Are you sure you want to delete \"\(event.title)\"? This cannot be undone.")
+        }
     }
 }
 

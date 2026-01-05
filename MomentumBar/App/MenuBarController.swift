@@ -11,6 +11,8 @@ import Combine
 import EventKit
 
 class MenuBarController {
+    static var shared: MenuBarController?
+
     private var statusItem: NSStatusItem
     private var popover: NSPopover
     private var eventMonitor: EventMonitor?
@@ -19,10 +21,13 @@ class MenuBarController {
     private var cancellables = Set<AnyCancellable>()
     private var upcomingMeetingsCount: Int = 0
     private var nextMeeting: CalendarEvent?
+    private(set) var isPinned: Bool = false
 
     init() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         popover = NSPopover()
+
+        MenuBarController.shared = self
 
         setupPopover()
         configureStatusButton()
@@ -31,6 +36,11 @@ class MenuBarController {
         startCalendarRefreshTimer()
         observePreferences()
         setupNotifications()
+
+        // Load initial pin state
+        let preferences = StorageService.shared.loadPreferences()
+        isPinned = preferences.keepPopoverPinned
+        updatePopoverBehavior()
     }
 
     deinit {
@@ -251,7 +261,12 @@ class MenuBarController {
     func showPopover() {
         if let button = statusItem.button {
             popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
-            eventMonitor?.start()
+
+            // Only start event monitor if not pinned
+            if !isPinned {
+                eventMonitor?.start()
+            }
+
             // Activate after popover layout is complete to avoid layout recursion
             DispatchQueue.main.async {
                 NSApp.activate(ignoringOtherApps: true)
@@ -263,4 +278,37 @@ class MenuBarController {
         popover.performClose(nil)
         eventMonitor?.stop()
     }
+
+    // MARK: - Pin Control
+
+    func togglePin() {
+        isPinned.toggle()
+
+        // Save preference
+        var preferences = StorageService.shared.loadPreferences()
+        preferences.keepPopoverPinned = isPinned
+        StorageService.shared.savePreferences(preferences)
+
+        updatePopoverBehavior()
+
+        // Post notification for UI updates
+        NotificationCenter.default.post(name: .popoverPinStateChanged, object: nil)
+    }
+
+    private func updatePopoverBehavior() {
+        if isPinned {
+            popover.behavior = .applicationDefined
+            eventMonitor?.stop()
+        } else {
+            popover.behavior = .transient
+            if popover.isShown {
+                eventMonitor?.start()
+            }
+        }
+    }
+}
+
+// MARK: - Notification Names
+extension Notification.Name {
+    static let popoverPinStateChanged = Notification.Name("popoverPinStateChanged")
 }

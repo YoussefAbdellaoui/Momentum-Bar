@@ -33,6 +33,10 @@ struct AppPreferences: Codable, Equatable {
     var meetingReminderMinutes: Int = 10
     var showMeetingReminders: Bool = true
 
+    // Buffer Time Warnings
+    var showBufferWarnings: Bool = true
+    var minimumBufferMinutes: Int = 10
+
     // Menu Bar
     var showMeetingBadge: Bool = true
     var showNextMeetingTime: Bool = false
@@ -40,6 +44,9 @@ struct AppPreferences: Codable, Equatable {
     // Startup
     var launchAtLogin: Bool = false
     var hideDockIcon: Bool = false
+
+    // Window Behavior
+    var keepPopoverPinned: Bool = false
 
     // Keyboard Shortcuts
     var togglePopoverShortcut: KeyboardShortcut = .init(key: "T", modifiers: [.command, .shift])

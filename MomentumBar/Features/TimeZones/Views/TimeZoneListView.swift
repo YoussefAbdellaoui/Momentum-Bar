@@ -20,7 +20,8 @@ struct TimeZoneListView: View {
                 timeZonesList
             }
 
-            addButton
+            // Bottom bar with Add and Share buttons
+            bottomBar
         }
         .sheet(isPresented: $showingAddSheet) {
             AddTimeZoneView(isPresented: $showingAddSheet)
@@ -80,21 +81,27 @@ struct TimeZoneListView: View {
         .scrollContentBackground(.hidden)
     }
 
-    private var addButton: some View {
-        Button {
-            showingAddSheet = true
-        } label: {
-            HStack {
-                Image(systemName: "plus.circle.fill")
-                Text("Add Time Zone")
+    private var bottomBar: some View {
+        HStack {
+            Button {
+                showingAddSheet = true
+            } label: {
+                HStack {
+                    Image(systemName: "plus.circle.fill")
+                    Text("Add Time Zone")
+                }
             }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 8)
+            .buttonStyle(.plain)
+            .foregroundStyle(.blue)
+
+            Spacer()
+
+            if !appState.timeZones.isEmpty {
+                ShareTimezoneCardButton()
+            }
         }
-        .buttonStyle(.plain)
-        .foregroundStyle(.blue)
         .padding(.horizontal)
-        .padding(.bottom, 8)
+        .padding(.vertical, 8)
     }
 }
 

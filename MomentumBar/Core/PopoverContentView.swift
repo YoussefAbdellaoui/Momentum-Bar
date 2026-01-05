@@ -163,6 +163,8 @@ struct CalendarTabView: View {
 
 // MARK: - Footer View
 struct FooterView: View {
+    @State private var isPinned: Bool = false
+
     var body: some View {
         HStack {
             SettingsLink {
@@ -173,6 +175,17 @@ struct FooterView: View {
             .help("Settings")
 
             Spacer()
+
+            // Pin button
+            Button {
+                MenuBarController.shared?.togglePin()
+            } label: {
+                Image(systemName: isPinned ? "pin.fill" : "pin")
+                    .font(.body)
+                    .foregroundStyle(isPinned ? Color.accentColor : .primary)
+            }
+            .buttonStyle(.plain)
+            .help(isPinned ? "Unpin from screen" : "Pin to screen")
 
             Button {
                 NSApplication.shared.terminate(nil)
@@ -185,6 +198,12 @@ struct FooterView: View {
         }
         .padding(.horizontal)
         .padding(.vertical, 10)
+        .onAppear {
+            isPinned = MenuBarController.shared?.isPinned ?? false
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .popoverPinStateChanged)) { _ in
+            isPinned = MenuBarController.shared?.isPinned ?? false
+        }
     }
 }
 

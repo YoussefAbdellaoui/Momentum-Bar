@@ -180,23 +180,35 @@ struct TimeZoneSettingsTab: View {
     @State private var appState = AppState.shared
     @State private var showAddGroup = false
     @State private var newGroupName = ""
+    @State private var groupToDelete: TimezoneGroup?
 
     var body: some View {
         Form {
             Section("Groups") {
-                ForEach(appState.groups) { group in
-                    HStack {
-                        Image(systemName: group.icon)
-                            .foregroundStyle(group.color)
-                        Text(group.name)
-                        Spacer()
-                        Text("\(appState.timeZones(for: group).count) zones")
-                            .foregroundStyle(.secondary)
-                            .font(.caption)
-                    }
-                    .contextMenu {
-                        Button("Delete", role: .destructive) {
-                            deleteGroup(group)
+                if appState.groups.isEmpty {
+                    Text("No groups created")
+                        .foregroundStyle(.secondary)
+                        .font(.caption)
+                } else {
+                    ForEach(appState.groups) { group in
+                        HStack {
+                            Image(systemName: group.icon)
+                                .foregroundStyle(group.color)
+                            Text(group.name)
+                            Spacer()
+                            Text("\(appState.timeZones(for: group).count) zones")
+                                .foregroundStyle(.secondary)
+                                .font(.caption)
+
+                            Button {
+                                groupToDelete = group
+                            } label: {
+                                Image(systemName: "trash")
+                                    .font(.caption)
+                            }
+                            .buttonStyle(.plain)
+                            .foregroundStyle(.red.opacity(0.7))
+                            .help("Delete group")
                         }
                     }
                 }
@@ -250,6 +262,33 @@ struct TimeZoneSettingsTab: View {
         }
         .formStyle(.grouped)
         .padding()
+        .confirmationDialog(
+            "Delete Group",
+            isPresented: .init(
+                get: { groupToDelete != nil },
+                set: { if !$0 { groupToDelete = nil } }
+            ),
+            titleVisibility: .visible
+        ) {
+            if let group = groupToDelete {
+                Button("Delete", role: .destructive) {
+                    deleteGroup(group)
+                    groupToDelete = nil
+                }
+            }
+            Button("Cancel", role: .cancel) {
+                groupToDelete = nil
+            }
+        } message: {
+            if let group = groupToDelete {
+                let zoneCount = appState.timeZones(for: group).count
+                if zoneCount > 0 {
+                    Text("Delete \"\(group.name)\"? The \(zoneCount) time zone\(zoneCount == 1 ? "" : "s") in this group will be ungrouped.")
+                } else {
+                    Text("Delete \"\(group.name)\"?")
+                }
+            }
+        }
     }
 
     private func addGroup() {
@@ -378,6 +417,42 @@ struct CalendarSettingsTab: View {
                     Text("30 minutes before").tag(30)
                 }
                 .disabled(!appState.preferences.showMeetingReminders)
+            }
+
+            Section("Buffer Time Warnings") {
+                Toggle("Warn about back-to-back meetings", isOn: Binding(
+                    get: { appState.preferences.showBufferWarnings },
+                    set: {
+                        appState.preferences.showBufferWarnings = $0
+                        // Refresh calendar to update warnings
+                        if calendarService.authorizationStatus == .fullAccess {
+                            calendarService.refresh()
+                        }
+                    }
+                ))
+
+                Picker("Minimum buffer time", selection: Binding(
+                    get: { appState.preferences.minimumBufferMinutes },
+                    set: {
+                        appState.preferences.minimumBufferMinutes = $0
+                        // Refresh calendar to update warnings
+                        if calendarService.authorizationStatus == .fullAccess {
+                            calendarService.refresh()
+                        }
+                    }
+                )) {
+                    Text("5 minutes").tag(5)
+                    Text("10 minutes").tag(10)
+                    Text("15 minutes").tag(15)
+                    Text("30 minutes").tag(30)
+                }
+                .disabled(!appState.preferences.showBufferWarnings)
+
+                if appState.preferences.showBufferWarnings {
+                    Text("Get notified when meetings have less than \(appState.preferences.minimumBufferMinutes) minutes between them")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
             }
         }
         .formStyle(.grouped)
