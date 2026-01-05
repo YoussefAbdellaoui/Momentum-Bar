@@ -20,10 +20,22 @@ struct TimeZoneRowView: View {
 
             // Time zone info
             VStack(alignment: .leading, spacing: 2) {
-                Text(entry.displayName)
-                    .font(.headline)
-                    .fontWeight(.medium)
-                    .lineLimit(1)
+                HStack(spacing: 6) {
+                    Text(entry.displayName)
+                        .font(.headline)
+                        .fontWeight(.medium)
+                        .lineLimit(1)
+
+                    if let group = groupForEntry {
+                        Text(group.name)
+                            .font(.caption2)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(group.color.opacity(0.2))
+                            .foregroundStyle(group.color)
+                            .cornerRadius(4)
+                    }
+                }
 
                 HStack(spacing: 4) {
                     Text(entry.abbreviation)
@@ -66,6 +78,11 @@ struct TimeZoneRowView: View {
     private var isDaytime: Bool {
         guard let tz = entry.timeZone else { return true }
         return appState.isDaytime(for: tz)
+    }
+
+    private var groupForEntry: TimezoneGroup? {
+        guard let groupID = entry.groupID else { return nil }
+        return appState.groups.first { $0.id == groupID }
     }
 
     private var formattedTime: String {

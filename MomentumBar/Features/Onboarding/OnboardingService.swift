@@ -72,6 +72,7 @@ final class OnboardingService {
     func completeOnboarding() {
         hasCompletedOnboarding = true
         saveState()
+        OnboardingWindowController.shared.closeOnboarding()
     }
 
     func resetOnboarding() {

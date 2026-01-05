@@ -238,9 +238,12 @@ private class WindowDelegateHandler: NSObject, NSWindowDelegate {
     static let shared = WindowDelegateHandler()
 
     func windowWillClose(_ notification: Notification) {
-        // Mark onboarding as complete when window is closed
+        // Mark onboarding as complete when window is closed (e.g., user clicks X)
         Task { @MainActor in
-            OnboardingService.shared.completeOnboarding()
+            // Only complete if not already completed (prevents redundant calls)
+            if !OnboardingService.shared.hasCompletedOnboarding {
+                OnboardingService.shared.completeOnboarding()
+            }
             OnboardingWindowController.shared.closeOnboarding()
         }
     }

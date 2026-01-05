@@ -105,6 +105,7 @@ struct EditTimeZoneView: View {
     @State private var appState = AppState.shared
     @State private var customName: String = ""
     @State private var selectedColor: Color = .blue
+    @State private var selectedGroupID: UUID? = nil
 
     var body: some View {
         VStack(spacing: 20) {
@@ -122,6 +123,32 @@ struct EditTimeZoneView: View {
                 Text("Leave empty to use default name")
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Group")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                Picker("Group", selection: $selectedGroupID) {
+                    Text("No Group").tag(nil as UUID?)
+                    ForEach(appState.groups) { group in
+                        HStack {
+                            Image(systemName: group.icon)
+                                .foregroundStyle(group.color)
+                            Text(group.name)
+                        }
+                        .tag(group.id as UUID?)
+                    }
+                }
+                .pickerStyle(.menu)
+                .labelsHidden()
+
+                if appState.groups.isEmpty {
+                    Text("Create groups in Settings → Time Zones")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                }
             }
 
             VStack(alignment: .leading, spacing: 8) {
@@ -153,6 +180,7 @@ struct EditTimeZoneView: View {
         .onAppear {
             customName = entry.customName ?? ""
             selectedColor = entry.color
+            selectedGroupID = entry.groupID
         }
     }
 
@@ -160,6 +188,7 @@ struct EditTimeZoneView: View {
         var updatedEntry = entry
         updatedEntry.customName = customName.isEmpty ? nil : customName
         updatedEntry.colorHex = selectedColor.toHex()
+        updatedEntry.groupID = selectedGroupID
         appState.updateTimeZone(updatedEntry)
         isPresented = false
     }

@@ -55,9 +55,12 @@ final class StorageService {
     static let shared = StorageService()
 
     private let defaults = UserDefaults.standard
-    private let sharedDefaults = UserDefaults(suiteName: "group.com.momentumbar.shared")
+    private let sharedDefaults: UserDefaults?
     private let encoder = JSONEncoder()
     private let decoder = JSONDecoder()
+
+    /// Whether the app group is available (requires proper provisioning)
+    private(set) var isAppGroupAvailable: Bool = false
 
     private enum Keys {
         static let timeZones = "com.momentumbar.timeZones"
@@ -75,7 +78,27 @@ final class StorageService {
     // MARK: - App Group Suite Name
     static let appGroupSuite = "group.com.momentumbar.shared"
 
-    private init() {}
+    private init() {
+        // Try to initialize shared defaults, but gracefully handle if app group isn't available
+        if let shared = UserDefaults(suiteName: StorageService.appGroupSuite) {
+            // Test if we can actually write to the app group
+            let testKey = "com.momentumbar.appGroupTest"
+            shared.set(true, forKey: testKey)
+            if shared.bool(forKey: testKey) {
+                shared.removeObject(forKey: testKey)
+                self.sharedDefaults = shared
+                self.isAppGroupAvailable = true
+            } else {
+                self.sharedDefaults = nil
+                self.isAppGroupAvailable = false
+                print("App Group not available: Unable to write to shared container. Widget sync disabled.")
+            }
+        } else {
+            self.sharedDefaults = nil
+            self.isAppGroupAvailable = false
+            print("App Group not available: Could not create UserDefaults suite. Widget sync disabled.")
+        }
+    }
 
     // MARK: - Time Zones
     func saveTimeZones(_ zones: [TimeZoneEntry]) {
@@ -92,7 +115,7 @@ final class StorageService {
 
     // MARK: - Widget Sync
     private func syncTimeZonesToWidget(_ zones: [TimeZoneEntry]) {
-        guard let sharedDefaults = sharedDefaults else { return }
+        guard isAppGroupAvailable, let sharedDefaults = sharedDefaults else { return }
 
         // Convert to widget-compatible format
         let widgetEntries = zones.map { entry in
@@ -245,7 +268,7 @@ final class StorageService {
 
     /// Save pomodoro state to shared App Group for widget
     func savePomodoroState(_ state: SharedPomodoroState) {
-        guard let sharedDefaults = sharedDefaults else { return }
+        guard isAppGroupAvailable, let sharedDefaults = sharedDefaults else { return }
 
         do {
             let data = try encoder.encode(state)
@@ -260,7 +283,8 @@ final class StorageService {
 
     /// Load pomodoro state from shared App Group
     func loadPomodoroState() -> SharedPomodoroState? {
-        guard let sharedDefaults = sharedDefaults,
+        guard isAppGroupAvailable,
+              let sharedDefaults = sharedDefaults,
               let data = sharedDefaults.data(forKey: Keys.sharedPomodoroState) else {
             return nil
         }
@@ -270,7 +294,7 @@ final class StorageService {
 
     /// Save a command from widget to be processed by main app
     func savePomodoroCommand(_ command: WidgetPomodoroCommand) {
-        guard let sharedDefaults = sharedDefaults else { return }
+        guard isAppGroupAvailable, let sharedDefaults = sharedDefaults else { return }
 
         let widgetCommand = WidgetCommand(command: command, timestamp: Date())
 
@@ -284,7 +308,8 @@ final class StorageService {
 
     /// Load and clear pending command from widget
     func loadAndClearPomodoroCommand() -> WidgetCommand? {
-        guard let sharedDefaults = sharedDefaults,
+        guard isAppGroupAvailable,
+              let sharedDefaults = sharedDefaults,
               let data = sharedDefaults.data(forKey: Keys.sharedPomodoroCommand) else {
             return nil
         }
