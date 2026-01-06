@@ -18,7 +18,7 @@ final class LicenseAPIClient {
 
     /// Base URL for the license API
     /// TODO: Replace with your actual license server URL
-    private let baseURL = "https://momentum-bar-production.up.railway.app/v1"
+    private let baseURL = "https://momentum-bar-production.up.railway.app/api/v1"
 
     /// Request timeout in seconds
     private let timeout: TimeInterval = 30

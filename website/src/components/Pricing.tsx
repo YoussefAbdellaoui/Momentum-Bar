@@ -19,7 +19,7 @@ const plans = [
     ],
     popular: false,
     cta: "Get Solo",
-    href: "https://buy.stripe.com/YOUR_SOLO_LINK",
+    href: "https://buy.stripe.com/test_aFa3cx7NPcz96BN6c35c400",
     isContact: false,
   },
   {
@@ -35,7 +35,7 @@ const plans = [
     ],
     popular: true,
     cta: "Get Multiple",
-    href: "https://buy.stripe.com/YOUR_MULTIPLE_LINK",
+    href: "https://buy.stripe.com/test_aFaaEZ4BDeHhbW757Z5c401",
     isContact: false,
   },
   {
