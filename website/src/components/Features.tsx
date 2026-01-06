@@ -18,48 +18,48 @@ import {
 const features = [
   {
     icon: Globe,
-    title: 'Multi-Time Zone Display',
-    description: 'Add unlimited time zones with custom labels. Perfect for tracking team members across the globe.',
+    title: 'World Clock in Your Menu Bar',
+    description: 'Track unlimited cities with intelligent sunrise/sunset indicators. Know when your colleagues are awake before you message them.',
   },
   {
     icon: Calendar,
-    title: 'Calendar Integration',
-    description: 'See your upcoming meetings with one-click join for Zoom, Google Meet, and Teams.',
+    title: 'Meeting Hub',
+    description: 'Connect your calendar and access meeting analytics. See where your time goes and join calls instantly from one click.',
   },
   {
     icon: Clock,
-    title: 'Pomodoro Timer',
-    description: 'Built-in focus timer to boost your productivity with customizable work and break intervals.',
+    title: 'Time Zone Math Made Easy',
+    description: 'Convert times across zones with natural language. Type "3pm EST" and instantly see it in all your tracked locations.',
   },
   {
     icon: Moon,
-    title: 'Day/Night Indicators',
-    description: 'Instantly see who\'s awake with accurate sunrise/sunset calculations for each location.',
-  },
-  {
-    icon: Palette,
-    title: 'Beautiful Themes',
-    description: 'Choose from built-in themes or create your own with custom colors and fonts.',
-  },
-  {
-    icon: Shield,
-    title: 'Privacy First',
-    description: 'No tracking, no analytics, no data collection. Your data stays on your Mac.',
+    title: 'Context-Aware Intelligence',
+    description: 'Visual day/night cycles show real-time local context. Prevent those awkward 3am messages to teammates.',
   },
   {
     icon: Zap,
-    title: 'Lightning Fast',
-    description: 'Native macOS app built with Swift. Minimal memory footprint, instant response.',
+    title: 'Focus Sessions with Widgets',
+    description: 'Launch Pomodoro timers that live in your menu bar and Mac widgets. Your focus timer, always visible, never intrusive.',
+  },
+  {
+    icon: Shield,
+    title: 'Zero Cloud, Zero Tracking',
+    description: 'Everything runs locally. No accounts, no servers, no data mining. Your schedule and preferences never leave your Mac.',
+  },
+  {
+    icon: Palette,
+    title: 'Adaptive Interface',
+    description: 'Automatically matches your system theme with custom accent colors. Looks native because it is native.',
   },
   {
     icon: Bell,
-    title: 'Smart Notifications',
-    description: 'Get reminders before meetings with quick actions to join or snooze.',
+    title: 'Intelligent Meeting Reminders',
+    description: 'Pre-meeting notifications with one-tap join for Zoom, Meet, and Teams. Your virtual meeting assistant that actually helps.',
   },
   {
     icon: Users,
-    title: 'Team Friendly',
-    description: 'Organize time zones by groups. Perfect for managing distributed teams.',
+    title: 'Team Timezone Groups',
+    description: 'Create custom groups for different teams and projects. Switch contexts instantly to see what matters now.',
   },
 ]
 
@@ -112,11 +112,11 @@ export default function Features() {
             Features
           </span>
           <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
-            Everything You Need
+            Your Command Center for Time
           </h2>
           <p className="text-xl text-white/70 max-w-2xl mx-auto">
-            Powerful features designed for productivity, wrapped in a beautiful interface
-            that lives right in your menu bar.
+            MomentumBar brings global time awareness, calendar intelligence, and focus tools together
+            in one elegant menu bar experience. Built for the way you actually work.
           </p>
         </motion.div>
 
