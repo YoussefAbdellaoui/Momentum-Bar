@@ -67,6 +67,21 @@ struct TimeZoneListView: View {
                             editingEntry = entry
                         }
 
+                        Divider()
+
+                        Button {
+                            appState.togglePinToMenuBar(for: entry)
+                        } label: {
+                            if entry.isPinnedToMenuBar {
+                                Label("Unpin from Menu Bar", systemImage: "pin.slash")
+                            } else {
+                                Label("Pin to Menu Bar", systemImage: "pin")
+                            }
+                        }
+                        .disabled(!entry.isPinnedToMenuBar && !appState.canPinMoreTimeZones)
+
+                        Divider()
+
                         Button("Delete", role: .destructive) {
                             if let index = appState.timeZones.firstIndex(where: { $0.id == entry.id }) {
                                 appState.removeTimeZone(at: IndexSet(integer: index))

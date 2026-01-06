@@ -15,6 +15,7 @@ struct TimeZoneEntry: Identifiable, Codable, Hashable {
     var colorHex: String?
     var order: Int
     var groupID: UUID?
+    var isPinnedToMenuBar: Bool
 
     init(
         id: UUID = UUID(),
@@ -22,7 +23,8 @@ struct TimeZoneEntry: Identifiable, Codable, Hashable {
         customName: String? = nil,
         colorHex: String? = nil,
         order: Int = 0,
-        groupID: UUID? = nil
+        groupID: UUID? = nil,
+        isPinnedToMenuBar: Bool = false
     ) {
         self.id = id
         self.identifier = identifier
@@ -30,6 +32,23 @@ struct TimeZoneEntry: Identifiable, Codable, Hashable {
         self.colorHex = colorHex
         self.order = order
         self.groupID = groupID
+        self.isPinnedToMenuBar = isPinnedToMenuBar
+    }
+
+    // Custom decoder to handle migration from old data without isPinnedToMenuBar
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        identifier = try container.decode(String.self, forKey: .identifier)
+        customName = try container.decodeIfPresent(String.self, forKey: .customName)
+        colorHex = try container.decodeIfPresent(String.self, forKey: .colorHex)
+        order = try container.decode(Int.self, forKey: .order)
+        groupID = try container.decodeIfPresent(UUID.self, forKey: .groupID)
+        isPinnedToMenuBar = try container.decodeIfPresent(Bool.self, forKey: .isPinnedToMenuBar) ?? false
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id, identifier, customName, colorHex, order, groupID, isPinnedToMenuBar
     }
 
     var timeZone: TimeZone? {
@@ -68,6 +87,64 @@ struct TimeZoneEntry: Identifiable, Codable, Hashable {
     var color: Color {
         guard let hex = colorHex else { return .blue }
         return Color(hex: hex) ?? .blue
+    }
+
+    /// Short city name for menu bar display (e.g., NYC, LON, TYO)
+    var shortCityName: String {
+        // Use custom name if set and short enough
+        if let custom = customName, !custom.isEmpty, custom.count <= 5 {
+            return custom.uppercased()
+        }
+
+        // Map common cities to abbreviations
+        let abbreviations: [String: String] = [
+            "New_York": "NYC",
+            "Los_Angeles": "LA",
+            "San_Francisco": "SF",
+            "London": "LON",
+            "Tokyo": "TYO",
+            "Paris": "PAR",
+            "Berlin": "BER",
+            "Sydney": "SYD",
+            "Singapore": "SIN",
+            "Hong_Kong": "HKG",
+            "Dubai": "DXB",
+            "Chicago": "CHI",
+            "Toronto": "TOR",
+            "Mumbai": "BOM",
+            "Shanghai": "SHA",
+            "Beijing": "PEK",
+            "Melbourne": "MEL",
+            "Auckland": "AKL",
+            "Seoul": "SEL",
+            "Amsterdam": "AMS",
+            "Madrid": "MAD",
+            "Rome": "ROM",
+            "Moscow": "MOW",
+            "Bangkok": "BKK",
+            "Jakarta": "JKT",
+            "Cairo": "CAI",
+            "Johannesburg": "JNB",
+            "Sao_Paulo": "SAO",
+            "Mexico_City": "MEX",
+            "Vancouver": "YVR",
+            "Denver": "DEN",
+            "Phoenix": "PHX",
+            "Seattle": "SEA",
+            "Miami": "MIA",
+            "Boston": "BOS",
+            "Dallas": "DFW",
+            "Atlanta": "ATL"
+        ]
+
+        let city = identifier.components(separatedBy: "/").last ?? identifier
+        if let abbr = abbreviations[city] {
+            return abbr
+        }
+
+        // Fallback: first 3 characters of city name, uppercase
+        let cleanCity = city.replacingOccurrences(of: "_", with: "")
+        return String(cleanCity.prefix(3)).uppercased()
     }
 }
 

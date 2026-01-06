@@ -168,6 +168,16 @@ class MenuBarController {
             displayText = " " + formattedMenuBarTime(preferences: preferences)
         }
 
+        // Add pinned timezones
+        let pinnedDisplay = formattedPinnedTimeZones(preferences: preferences)
+        if !pinnedDisplay.isEmpty {
+            if displayText.isEmpty {
+                displayText = pinnedDisplay
+            } else {
+                displayText += " | " + pinnedDisplay
+            }
+        }
+
         // Add next meeting time if enabled
         if preferences.showNextMeetingTime, let next = nextMeeting {
             let minutes = next.minutesUntilStart
@@ -247,6 +257,32 @@ class MenuBarController {
         }
 
         return formatter.string(from: Date())
+    }
+
+    private func formattedPinnedTimeZones(preferences: AppPreferences) -> String {
+        let appState = AppState.shared
+        let pinnedZones = appState.pinnedTimeZones
+
+        guard !pinnedZones.isEmpty else { return "" }
+
+        let formatter = DateFormatter()
+        let separator = preferences.timeSeparator.rawValue
+
+        // Use simplified format for menu bar (no seconds to save space)
+        if preferences.use24HourFormat {
+            formatter.dateFormat = "HH'\(separator)'mm"
+        } else {
+            formatter.dateFormat = "h'\(separator)'mm a"
+        }
+
+        let timeStrings = pinnedZones.compactMap { entry -> String? in
+            guard let tz = entry.timeZone else { return nil }
+            formatter.timeZone = tz
+            let time = formatter.string(from: Date())
+            return "\(entry.shortCityName) \(time)"
+        }
+
+        return timeStrings.joined(separator: " | ")
     }
 
     // MARK: - Popover Control

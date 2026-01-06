@@ -14,6 +14,9 @@ final class AppState {
     // MARK: - Singleton
     static let shared = AppState()
 
+    // MARK: - Constants
+    static let maxPinnedTimeZones = 5
+
     // MARK: - Time Zones
     var timeZones: [TimeZoneEntry] = [] {
         didSet {
@@ -43,6 +46,28 @@ final class AppState {
 
     func timeZones(for group: TimezoneGroup) -> [TimeZoneEntry] {
         timeZones.filter { $0.groupID == group.id }
+    }
+
+    // MARK: - Pinned Timezones (Menu Bar)
+    var pinnedTimeZones: [TimeZoneEntry] {
+        timeZones
+            .filter { $0.isPinnedToMenuBar }
+            .sorted { $0.order < $1.order }
+    }
+
+    var canPinMoreTimeZones: Bool {
+        pinnedTimeZones.count < Self.maxPinnedTimeZones
+    }
+
+    func togglePinToMenuBar(for entry: TimeZoneEntry) {
+        guard let index = timeZones.firstIndex(where: { $0.id == entry.id }) else { return }
+
+        // Check limit when pinning (not when unpinning)
+        if !timeZones[index].isPinnedToMenuBar && !canPinMoreTimeZones {
+            return
+        }
+
+        timeZones[index].isPinnedToMenuBar.toggle()
     }
 
     // MARK: - Preferences

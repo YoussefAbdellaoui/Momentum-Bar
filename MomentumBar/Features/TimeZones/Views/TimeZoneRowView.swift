@@ -26,6 +26,13 @@ struct TimeZoneRowView: View {
                         .fontWeight(.medium)
                         .lineLimit(1)
 
+                    // Pin indicator for pinned timezones
+                    if entry.isPinnedToMenuBar {
+                        Image(systemName: "pin.fill")
+                            .font(.caption2)
+                            .foregroundStyle(.orange)
+                    }
+
                     if let group = groupForEntry {
                         Text(group.name)
                             .font(.caption2)
