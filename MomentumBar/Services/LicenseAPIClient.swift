@@ -66,7 +66,7 @@ final class LicenseAPIClient {
 
     private struct ActivationRequest: Encodable {
         let licenseKey: String
-        let hardwareID: String
+        let hardwareId: String
         let machineName: String
         let appVersion: String
     }
@@ -96,7 +96,7 @@ final class LicenseAPIClient {
 
     private struct ValidationRequest: Encodable {
         let licenseKey: String
-        let hardwareID: String
+        let hardwareId: String
     }
 
     private struct ValidationResponse: Decodable {
@@ -107,7 +107,7 @@ final class LicenseAPIClient {
 
     private struct DeactivationRequest: Encodable {
         let licenseKey: String
-        let hardwareID: String
+        let hardwareId: String
     }
 
     private struct DeactivationResponse: Decodable {
@@ -158,7 +158,7 @@ final class LicenseAPIClient {
 
         let request = ActivationRequest(
             licenseKey: key,
-            hardwareID: hardwareID,
+            hardwareId: hardwareID,
             machineName: machineName,
             appVersion: Bundle.main.appVersion
         )
@@ -197,7 +197,7 @@ final class LicenseAPIClient {
     ) async throws -> ValidationResult {
         let request = ValidationRequest(
             licenseKey: key,
-            hardwareID: hardwareID
+            hardwareId: hardwareID
         )
 
         do {
@@ -229,7 +229,7 @@ final class LicenseAPIClient {
     ) async throws -> Bool {
         let request = DeactivationRequest(
             licenseKey: key,
-            hardwareID: hardwareID
+            hardwareId: hardwareID
         )
 
         let response: DeactivationResponse = try await post(
