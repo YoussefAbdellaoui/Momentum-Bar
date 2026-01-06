@@ -493,132 +493,272 @@ struct CalendarSettingsTab: View {
 struct FocusSettingsTab: View {
     @State private var focusService = FocusModeService.shared
     @State private var showSetupSheet = false
+    @State private var setupMode: SystemFocusMode?
 
     var body: some View {
         Form {
-            Section("Focus Mode Status") {
+            // Current Status
+            Section("Current Status") {
                 HStack {
-                    Image(systemName: focusService.isFocusModeActive ? "moon.fill" : "moon")
+                    Image(systemName: focusService.currentFocusMode?.systemImage ?? "moon")
                         .foregroundStyle(focusService.isFocusModeActive ? .purple : .secondary)
-                    Text(focusService.isFocusModeActive ? "Focus Mode Active" : "Focus Mode Inactive")
+                        .font(.title2)
+
+                    VStack(alignment: .leading) {
+                        Text(focusService.isFocusModeActive ? (focusService.currentFocusMode?.displayName ?? "Focus Active") : "No Focus Active")
+                            .fontWeight(.medium)
+                        if focusService.isFocusModeActive, let trigger = focusService.currentTrigger {
+                            Text("Triggered by: \(trigger.rawValue)")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+
                     Spacer()
-                    if focusService.isFocusModeActive, let trigger = focusService.currentTrigger {
-                        Text(trigger.rawValue)
+
+                    if focusService.isFocusModeActive {
+                        Button("Turn Off") {
+                            focusService.disableFocus()
+                        }
+                        .buttonStyle(.bordered)
+                    }
+                }
+
+                if let error = focusService.lastError {
+                    HStack {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundStyle(.orange)
+                        Text(error)
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
                 }
+            }
 
-                if focusService.isSetupComplete {
-                    Button(focusService.isFocusModeActive ? "Disable Focus" : "Enable Focus") {
-                        focusService.toggleFocus()
+            // Available Focus Modes
+            Section("Your Focus Modes") {
+                if focusService.availableFocusModes.isEmpty {
+                    HStack {
+                        ProgressView()
+                            .scaleEffect(0.7)
+                        Text("Loading Focus modes...")
+                            .foregroundStyle(.secondary)
+                    }
+                } else {
+                    ForEach(focusService.availableFocusModes) { mode in
+                        FocusModeRow(
+                            mode: mode,
+                            isActive: focusService.currentFocusMode?.id == mode.id,
+                            isSelected: focusService.settings.selectedFocusModeId == mode.id,
+                            hasShortcut: focusService.shortcutExists(named: focusService.shortcutName(for: mode)),
+                            onActivate: {
+                                focusService.toggleFocus(mode: mode)
+                            },
+                            onSetup: {
+                                setupMode = mode
+                                showSetupSheet = true
+                            },
+                            onSelect: {
+                                focusService.selectFocusMode(mode)
+                            }
+                        )
+                    }
+                }
+
+                Button {
+                    focusService.loadAvailableFocusModes()
+                } label: {
+                    Label("Refresh Focus Modes", systemImage: "arrow.clockwise")
+                }
+                .buttonStyle(.link)
+            }
+
+            // Disable Shortcut
+            Section("Turn Off Shortcut") {
+                HStack {
+                    Image(systemName: "moon.zzz")
+                        .foregroundStyle(.secondary)
+                        .font(.title3)
+
+                    VStack(alignment: .leading) {
+                        Text("Focus Off")
+                            .fontWeight(.medium)
+                        Text("Required to turn off Focus from the app")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    Spacer()
+
+                    if focusService.hasDisableShortcut() {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundStyle(.green)
+                    } else {
+                        Button("Setup") {
+                            setupMode = nil
+                            showSetupSheet = true
+                        }
+                        .buttonStyle(.bordered)
                     }
                 }
             }
 
-            Section("Automatic Focus") {
-                Toggle("Enable during Pomodoro work sessions", isOn: Binding(
+            // Automatic Triggers
+            Section("Automatic Triggers") {
+                Toggle("Enable during Pomodoro sessions", isOn: Binding(
                     get: { focusService.settings.enableDuringPomodoro },
-                    set: {
-                        focusService.settings.enableDuringPomodoro = $0
-                        focusService.saveSettings()
+                    set: { newValue in
+                        focusService.updateSettings { $0.enableDuringPomodoro = newValue }
                     }
                 ))
-                .disabled(!focusService.isSetupComplete)
-
-                if focusService.settings.enableDuringPomodoro {
-                    Text("Focus Mode will automatically turn on when you start a Pomodoro work session")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
 
                 Toggle("Enable during calendar meetings", isOn: Binding(
                     get: { focusService.settings.enableDuringMeetings },
-                    set: {
-                        focusService.settings.enableDuringMeetings = $0
-                        focusService.saveSettings()
+                    set: { newValue in
+                        focusService.updateSettings { $0.enableDuringMeetings = newValue }
                     }
                 ))
-                .disabled(!focusService.isSetupComplete)
-
-                if focusService.settings.enableDuringMeetings {
-                    Text("Focus Mode will automatically turn on during calendar events")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
 
                 Toggle("Auto-disable after session ends", isOn: Binding(
                     get: { focusService.settings.autoDisableAfterSession },
-                    set: {
-                        focusService.settings.autoDisableAfterSession = $0
-                        focusService.saveSettings()
+                    set: { newValue in
+                        focusService.updateSettings { $0.autoDisableAfterSession = newValue }
                     }
                 ))
-                .disabled(!focusService.isSetupComplete)
-            }
 
-            Section("Shortcuts Integration") {
-                if focusService.isSetupComplete {
+                if focusService.selectedFocusMode != nil {
                     HStack {
-                        Image(systemName: "checkmark.circle.fill")
-                            .foregroundStyle(.green)
-                        Text("Shortcuts configured")
-                        Spacer()
-                        Button("Reconfigure") {
-                            showSetupSheet = true
-                        }
-                        .buttonStyle(.link)
-                    }
-
-                    TextField("Shortcut Name", text: Binding(
-                        get: { focusService.settings.shortcutName },
-                        set: {
-                            focusService.settings.shortcutName = $0
-                            focusService.saveSettings()
-                        }
-                    ))
-                    .textFieldStyle(.roundedBorder)
-                } else {
-                    VStack(alignment: .leading, spacing: 8) {
-                        HStack {
-                            Image(systemName: "exclamationmark.triangle.fill")
-                                .foregroundStyle(.orange)
-                            Text("Setup Required")
-                                .fontWeight(.medium)
-                        }
-
-                        Text("MomentumBar uses macOS Shortcuts to control Focus Mode. You'll need to create a simple shortcut first.")
-                            .font(.caption)
+                        Text("Default mode:")
                             .foregroundStyle(.secondary)
-
-                        Button("Setup Focus Mode") {
-                            showSetupSheet = true
-                        }
-                        .buttonStyle(.borderedProminent)
+                        Text(focusService.selectedFocusMode?.displayName ?? "None")
+                            .fontWeight(.medium)
                     }
-                    .padding(.vertical, 4)
+                    .font(.caption)
                 }
             }
         }
         .formStyle(.grouped)
         .padding()
         .sheet(isPresented: $showSetupSheet) {
-            FocusModeSetupSheet(isPresented: $showSetupSheet)
+            FocusModeSetupSheet(isPresented: $showSetupSheet, mode: setupMode)
         }
+        .onAppear {
+            focusService.loadAvailableFocusModes()
+            focusService.checkCurrentFocusStatus()
+        }
+    }
+}
+
+// MARK: - Focus Mode Row
+struct FocusModeRow: View {
+    let mode: SystemFocusMode
+    let isActive: Bool
+    let isSelected: Bool
+    let hasShortcut: Bool
+    let onActivate: () -> Void
+    let onSetup: () -> Void
+    let onSelect: () -> Void
+
+    var body: some View {
+        HStack {
+            Image(systemName: mode.systemImage)
+                .foregroundStyle(isActive ? .purple : .secondary)
+                .font(.title3)
+                .frame(width: 28)
+
+            VStack(alignment: .leading) {
+                HStack {
+                    Text(mode.displayName)
+                        .fontWeight(.medium)
+                    if isSelected {
+                        Text("Default")
+                            .font(.caption2)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Color.accentColor.opacity(0.2))
+                            .foregroundStyle(Color.accentColor)
+                            .cornerRadius(4)
+                    }
+                }
+                if !hasShortcut {
+                    Text("Shortcut not configured")
+                        .font(.caption)
+                        .foregroundStyle(.orange)
+                }
+            }
+
+            Spacer()
+
+            if hasShortcut {
+                Button(isActive ? "Active" : "Activate") {
+                    onActivate()
+                }
+                .buttonStyle(.bordered)
+                .tint(isActive ? .purple : nil)
+                .disabled(isActive)
+
+                Menu {
+                    Button("Set as Default") {
+                        onSelect()
+                    }
+                    Button("Reconfigure Shortcut") {
+                        onSetup()
+                    }
+                } label: {
+                    Image(systemName: "ellipsis.circle")
+                }
+                .menuStyle(.borderlessButton)
+            } else {
+                Button("Setup") {
+                    onSetup()
+                }
+                .buttonStyle(.borderedProminent)
+            }
+        }
+        .padding(.vertical, 4)
     }
 }
 
 // MARK: - Focus Mode Setup Sheet
 struct FocusModeSetupSheet: View {
     @Binding var isPresented: Bool
+    let mode: SystemFocusMode? // nil means setting up "Focus Off" shortcut
     @State private var focusService = FocusModeService.shared
     @State private var currentStep = 1
+
+    private var instructions: [(step: Int, title: String, description: String)] {
+        if let mode = mode {
+            return FocusModeService.setupInstructions(for: mode)
+        } else {
+            return FocusModeService.disableShortcutInstructions
+        }
+    }
+
+    private var shortcutName: String {
+        if let mode = mode {
+            return focusService.shortcutName(for: mode)
+        } else {
+            return "MomentumBar Focus Off"
+        }
+    }
+
+    private var title: String {
+        if let mode = mode {
+            return "Setup: \(mode.displayName)"
+        } else {
+            return "Setup: Focus Off"
+        }
+    }
 
     var body: some View {
         VStack(spacing: 0) {
             // Header
             HStack {
-                Text("Focus Mode Setup")
+                if let mode = mode {
+                    Image(systemName: mode.systemImage)
+                        .foregroundStyle(.purple)
+                }
+                Text(title)
                     .font(.headline)
                 Spacer()
                 Button("Cancel") {
@@ -633,7 +773,7 @@ struct FocusModeSetupSheet: View {
                 VStack(alignment: .leading, spacing: 20) {
                     // Progress
                     HStack(spacing: 4) {
-                        ForEach(1...6, id: \.self) { step in
+                        ForEach(1...instructions.count, id: \.self) { step in
                             RoundedRectangle(cornerRadius: 2)
                                 .fill(step <= currentStep ? Color.accentColor : Color.secondary.opacity(0.3))
                                 .frame(height: 4)
@@ -641,8 +781,24 @@ struct FocusModeSetupSheet: View {
                     }
                     .padding(.top)
 
+                    // Shortcut name reminder
+                    HStack {
+                        Image(systemName: "info.circle.fill")
+                            .foregroundStyle(.blue)
+                        VStack(alignment: .leading) {
+                            Text("Name your shortcut exactly:")
+                            Text(shortcutName)
+                                .fontWeight(.bold)
+                                .foregroundStyle(Color.accentColor)
+                        }
+                        .font(.callout)
+                    }
+                    .padding()
+                    .background(Color.blue.opacity(0.1))
+                    .cornerRadius(8)
+
                     // Instructions
-                    ForEach(FocusModeService.setupInstructions, id: \.step) { instruction in
+                    ForEach(instructions, id: \.step) { instruction in
                         SetupStepRow(
                             step: instruction.step,
                             title: instruction.title,
@@ -654,19 +810,6 @@ struct FocusModeSetupSheet: View {
                             currentStep = instruction.step
                         }
                     }
-
-                    // Shortcut Template
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Shortcut Template")
-                            .font(.headline)
-
-                        Text(FocusModeService.shortcutTemplate)
-                            .font(.system(.caption, design: .monospaced))
-                            .padding()
-                            .background(Color.primary.opacity(0.05))
-                            .cornerRadius(8)
-                    }
-                    .padding(.top)
                 }
                 .padding()
             }
@@ -679,13 +822,13 @@ struct FocusModeSetupSheet: View {
 
                 Spacer()
 
-                if currentStep < 6 {
+                if currentStep < instructions.count {
                     Button("Next Step") {
                         currentStep += 1
                     }
                     .buttonStyle(.borderedProminent)
                 } else {
-                    Button("Complete Setup") {
+                    Button("Done") {
                         focusService.completeSetup()
                         isPresented = false
                     }
@@ -695,7 +838,7 @@ struct FocusModeSetupSheet: View {
             .padding()
             .background(Color.primary.opacity(0.05))
         }
-        .frame(width: 500, height: 600)
+        .frame(width: 500, height: 550)
     }
 }
 
@@ -1117,3 +1260,4 @@ struct AboutTab: View {
 #Preview {
     SettingsView()
 }
+

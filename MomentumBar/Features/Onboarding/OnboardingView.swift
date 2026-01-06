@@ -87,7 +87,7 @@ struct OnboardingView: View {
         .frame(width: 480, height: 400)
         .background(Color(NSColor.windowBackgroundColor))
         .sheet(isPresented: $showFocusSetup) {
-            FocusModeSetupSheet(isPresented: $showFocusSetup)
+            FocusModeSetupSheet(isPresented: $showFocusSetup, mode: nil)
         }
     }
 
@@ -252,3 +252,4 @@ private class WindowDelegateHandler: NSObject, NSWindowDelegate {
 #Preview {
     OnboardingView()
 }
+
