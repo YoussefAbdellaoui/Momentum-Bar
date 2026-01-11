@@ -287,6 +287,12 @@ class MenuBarController {
 
     // MARK: - Popover Control
     @objc func togglePopover() {
+        // Check if user can access the app
+        guard LicenseService.shared.canUseApp else {
+            AppDelegate.shared?.showTrialExpiredWindow()
+            return
+        }
+
         if popover.isShown {
             closePopover()
         } else {
@@ -295,6 +301,12 @@ class MenuBarController {
     }
 
     func showPopover() {
+        // Check if user can access the app
+        guard LicenseService.shared.canUseApp else {
+            AppDelegate.shared?.showTrialExpiredWindow()
+            return
+        }
+
         if let button = statusItem.button {
             popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
 

@@ -14,89 +14,87 @@ struct TrialExpiredView: View {
     @State private var showError: Bool = false
     @State private var errorMessage: String = ""
 
-    @Environment(\.dismiss) private var dismiss
-
     var body: some View {
-        VStack(spacing: 24) {
-            // Header
-            VStack(spacing: 12) {
-                Image(systemName: "clock.badge.exclamationmark")
-                    .font(.system(size: 48))
-                    .foregroundStyle(.orange)
+        ScrollView {
+            VStack(spacing: 24) {
+                // Header
+                VStack(spacing: 12) {
+                    Image(systemName: "clock.badge.exclamationmark")
+                        .font(.system(size: 48))
+                        .foregroundStyle(.orange)
 
-                Text("Trial Period Ended")
-                    .font(.title)
-                    .fontWeight(.bold)
+                    Text("Trial Period Ended")
+                        .font(.title)
+                        .fontWeight(.bold)
 
-                Text("Your 3-day free trial has expired. Purchase a license to continue using MomentumBar.")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal)
-            }
-
-            Divider()
-
-            // Pricing Options
-            VStack(spacing: 16) {
-                Text("Choose Your Plan")
-                    .font(.headline)
-
-                ForEach(LicenseTier.allCases, id: \.self) { tier in
-                    PricingCard(tier: tier)
+                    Text("Your 3-day free trial has expired. Purchase a license to continue using MomentumBar.")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal)
                 }
-            }
 
-            Divider()
+                Divider()
 
-            // License Key Entry
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Already have a license key?")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                // Pricing Options
+                VStack(spacing: 16) {
+                    Text("Choose Your Plan")
+                        .font(.headline)
 
-                HStack {
-                    TextField("XXXX-XXXXX-XXXXX-XXXXX", text: $licenseKeyInput)
-                        .font(.system(.body, design: .monospaced))
-                        .textFieldStyle(.roundedBorder)
-                        .textCase(.uppercase)
-                        .onChange(of: licenseKeyInput) { _, newValue in
-                            licenseKeyInput = formatLicenseKey(newValue)
-                        }
-
-                    Button("Activate") {
-                        Task {
-                            await activateLicense()
-                        }
+                    ForEach(LicenseTier.allCases, id: \.self) { tier in
+                        PricingCard(tier: tier)
                     }
-                    .buttonStyle(.borderedProminent)
-                    .disabled(licenseKeyInput.isEmpty || licenseService.isLoading)
                 }
 
-                if showError {
-                    Text(errorMessage)
-                        .font(.caption)
-                        .foregroundStyle(.red)
+                Divider()
+
+                // License Key Entry
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Already have a license key?")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+
+                    HStack {
+                        TextField("XXXX-XXXXX-XXXXX-XXXXX", text: $licenseKeyInput)
+                            .font(.system(.body, design: .monospaced))
+                            .textFieldStyle(.roundedBorder)
+                            .textCase(.uppercase)
+                            .onChange(of: licenseKeyInput) { _, newValue in
+                                licenseKeyInput = formatLicenseKey(newValue)
+                            }
+
+                        Button("Activate") {
+                            Task {
+                                await activateLicense()
+                            }
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .disabled(licenseKeyInput.isEmpty || licenseService.isLoading)
+                    }
+
+                    if showError {
+                        Text(errorMessage)
+                            .font(.caption)
+                            .foregroundStyle(.red)
+                    }
+                }
+
+                // Footer
+                HStack {
+                    Link("Purchase License", destination: URL(string: "https://momentumbar.app/purchase")!)
+                        .buttonStyle(.borderedProminent)
+
+                    Spacer()
+
+                    Button("Quit App") {
+                        NSApplication.shared.terminate(nil)
+                    }
+                    .buttonStyle(.bordered)
                 }
             }
-
-            Spacer()
-
-            // Footer
-            HStack {
-                Link("Purchase License", destination: URL(string: "https://momentumbar.app/purchase")!)
-                    .buttonStyle(.borderedProminent)
-
-                Spacer()
-
-                Button("Quit App") {
-                    NSApplication.shared.terminate(nil)
-                }
-                .buttonStyle(.bordered)
-            }
+            .padding(24)
         }
-        .padding(24)
-        .frame(width: 450, height: 580)
+        .frame(width: 450, height: 600)
         .overlay {
             if licenseService.isLoading {
                 ProgressView()
@@ -116,7 +114,8 @@ struct TrialExpiredView: View {
 
         switch result {
         case .success, .alreadyActivated:
-            dismiss()
+            // Close the trial expired window on successful activation
+            AppDelegate.shared?.closeTrialExpiredWindow()
         case .invalidKey(let message):
             errorMessage = message
             showError = true

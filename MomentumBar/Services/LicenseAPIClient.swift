@@ -17,11 +17,22 @@ final class LicenseAPIClient {
     // MARK: - Configuration
 
     /// Base URL for the license API
-    /// TODO: Replace with your actual license server URL
     private let baseURL = "https://momentum-bar-production.up.railway.app/api/v1"
 
     /// Request timeout in seconds
     private let timeout: TimeInterval = 30
+
+    /// Custom URLSession with proper configuration
+    private lazy var urlSession: URLSession = {
+        let config = URLSessionConfiguration.default
+        config.timeoutIntervalForRequest = timeout
+        config.timeoutIntervalForResource = timeout
+        config.waitsForConnectivity = true
+        config.allowsCellularAccess = true
+        config.allowsExpensiveNetworkAccess = true
+        config.allowsConstrainedNetworkAccess = true
+        return URLSession(configuration: config)
+    }()
 
     // MARK: - Errors
     enum APIError: LocalizedError {
@@ -73,25 +84,19 @@ final class LicenseAPIClient {
 
     private struct ActivationResponse: Decodable {
         let success: Bool
-        let license: LicenseData?
+        let license: ServerLicenseData?
+        let message: String?
         let error: String?
         let errorCode: String?
     }
 
-    private struct LicenseData: Decodable {
+    /// Response structure matching what the server actually returns
+    private struct ServerLicenseData: Decodable {
         let tier: String
-        let licenseKey: String
         let email: String
-        let purchaseDate: String
         let maxMachines: Int
-        let activeMachines: [MachineData]
-        let signature: String
-    }
-
-    private struct MachineData: Decodable {
-        let id: String
-        let machineName: String
-        let activatedDate: String
+        let activatedMachines: Int
+        let expiresAt: String?
     }
 
     private struct ValidationRequest: Encodable {
@@ -102,7 +107,7 @@ final class LicenseAPIClient {
     private struct ValidationResponse: Decodable {
         let valid: Bool
         let message: String?
-        let license: LicenseData?
+        let license: ServerLicenseData?
     }
 
     private struct DeactivationRequest: Encodable {
@@ -169,7 +174,7 @@ final class LicenseAPIClient {
         )
 
         if response.success, let licenseData = response.license {
-            return try convertToLicense(licenseData)
+            return try convertToLicense(licenseData, licenseKey: key, hardwareId: hardwareID)
         } else {
             // Map error codes to specific errors
             if let errorCode = response.errorCode {
@@ -207,7 +212,7 @@ final class LicenseAPIClient {
             )
 
             if response.valid, let licenseData = response.license {
-                let license = try convertToLicense(licenseData)
+                let license = try convertToLicense(licenseData, licenseKey: key, hardwareId: hardwareID)
                 return .valid(license: license)
             } else {
                 return .invalid(reason: response.message ?? "License validation failed")
@@ -246,9 +251,13 @@ final class LicenseAPIClient {
         endpoint: String,
         body: T
     ) async throws -> R {
-        guard let url = URL(string: baseURL + endpoint) else {
+        let fullURL = baseURL + endpoint
+        guard let url = URL(string: fullURL) else {
+            print("[LicenseAPI] Invalid URL: \(fullURL)")
             throw APIError.invalidURL
         }
+
+        print("[LicenseAPI] Making request to: \(url.absoluteString)")
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
@@ -261,13 +270,21 @@ final class LicenseAPIClient {
 
         let (data, response): (Data, URLResponse)
         do {
-            (data, response) = try await URLSession.shared.data(for: request)
+            (data, response) = try await urlSession.data(for: request)
         } catch {
+            print("[LicenseAPI] Network error: \(error)")
+            print("[LicenseAPI] Error domain: \((error as NSError).domain)")
+            print("[LicenseAPI] Error code: \((error as NSError).code)")
             throw APIError.networkError(error)
         }
 
         guard let httpResponse = response as? HTTPURLResponse else {
             throw APIError.invalidResponse
+        }
+
+        // Log response for debugging
+        if let responseString = String(data: data, encoding: .utf8) {
+            print("[LicenseAPI] Response (\(httpResponse.statusCode)): \(responseString)")
         }
 
         guard (200...299).contains(httpResponse.statusCode) else {
@@ -280,35 +297,31 @@ final class LicenseAPIClient {
             let decoder = JSONDecoder()
             return try decoder.decode(R.self, from: data)
         } catch {
+            print("[LicenseAPI] Decoding error: \(error)")
             throw APIError.decodingError(error)
         }
     }
 
-    private func convertToLicense(_ data: LicenseData) throws -> License {
+    private func convertToLicense(_ data: ServerLicenseData, licenseKey: String, hardwareId: String) throws -> License {
         guard let tier = LicenseTier(rawValue: data.tier) else {
             throw APIError.decodingError(NSError(domain: "License", code: 0, userInfo: [NSLocalizedDescriptionKey: "Unknown tier"]))
         }
 
-        let dateFormatter = ISO8601DateFormatter()
-
-        let purchaseDate = dateFormatter.date(from: data.purchaseDate) ?? Date()
-
-        let machines = data.activeMachines.map { machine in
-            MachineEntry(
-                id: machine.id,
-                machineName: machine.machineName,
-                activatedDate: dateFormatter.date(from: machine.activatedDate) ?? Date()
-            )
-        }
+        // Create a machine entry for the current machine
+        let currentMachine = MachineEntry(
+            id: hardwareId,
+            machineName: Host.current().localizedName ?? "This Mac",
+            activatedDate: Date()
+        )
 
         return License(
             tier: tier,
-            licenseKey: data.licenseKey,
+            licenseKey: licenseKey,
             email: data.email,
-            purchaseDate: purchaseDate,
+            purchaseDate: Date(), // Server doesn't return this, use current date
             maxMachines: data.maxMachines,
-            activeMachines: machines,
-            signature: data.signature,
+            activeMachines: [currentMachine],
+            signature: "", // Server doesn't return signature
             lastValidated: Date(),
             cacheValidUntil: Calendar.current.date(byAdding: .day, value: 30, to: Date())
         )

@@ -11,6 +11,8 @@ import Carbon.HIToolbox
 import Combine
 
 class AppDelegate: NSObject, NSApplicationDelegate {
+    static var shared: AppDelegate?
+
     private var menuBarController: MenuBarController?
     private var hotKeyRefs: [EventHotKeyRef] = []
     private var eventHandler: EventHandlerRef?
@@ -18,6 +20,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var trialExpiredWindow: NSWindow?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        AppDelegate.shared = self
+
         // Apply dock icon preference
         applyDockIconPreference()
 
@@ -64,7 +68,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    private func showTrialExpiredWindow() {
+    func showTrialExpiredWindow() {
         // Create window if it doesn't exist
         if trialExpiredWindow == nil {
             let contentView = TrialExpiredView()
@@ -72,15 +76,25 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
             let window = NSWindow(contentViewController: hostingController)
             window.title = "License Required"
-            window.styleMask = [.titled, .closable]
+            window.styleMask = [.titled] // No closable - user must activate or quit
             window.isReleasedWhenClosed = false
             window.center()
+            window.level = .floating // Keep above other windows
+            window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+
+            // Prevent window from being closed via keyboard shortcut
+            window.standardWindowButton(.closeButton)?.isHidden = true
 
             trialExpiredWindow = window
         }
 
         trialExpiredWindow?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
+    }
+
+    func closeTrialExpiredWindow() {
+        trialExpiredWindow?.close()
+        trialExpiredWindow = nil
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
@@ -211,6 +225,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func handleHotKey(id: UInt32) {
+        // Block hotkeys when trial is expired
+        guard LicenseService.shared.canUseApp else {
+            showTrialExpiredWindow()
+            return
+        }
+
         switch id {
         case 1:
             menuBarController?.togglePopover()
