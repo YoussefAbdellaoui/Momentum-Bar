@@ -23,21 +23,26 @@ final class HardwareIDGenerator {
 
     /// Generate a stable, unique hardware identifier
     /// Returns a SHA256 hash of combined hardware attributes
+    /// Uses Serial Number + Model (more stable than MAC address which can change)
     func generateHardwareID() -> String {
         if let cached = cachedHardwareID {
             return cached
         }
 
         let serial = getSerialNumber() ?? "UNKNOWN_SERIAL"
-        let macAddress = getPrimaryMACAddress() ?? "00:00:00:00:00:00"
         let model = getModelIdentifier() ?? "Unknown_Model"
 
-        // Combine all identifiers
-        let combined = "\(serial)-\(macAddress)-\(model)"
+        // Use serial + model only (MAC address can vary with network interface)
+        let combined = "\(serial)-\(model)-MomentumBar"
 
         // Hash with SHA256 for consistent length and privacy
         let hardwareID = sha256Hash(combined)
         cachedHardwareID = hardwareID
+
+        #if DEBUG
+        print("[HardwareID] Serial: \(serial), Model: \(model)")
+        print("[HardwareID] Generated ID: \(hardwareID)")
+        #endif
 
         return hardwareID
     }

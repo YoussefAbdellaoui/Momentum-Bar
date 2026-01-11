@@ -168,6 +168,9 @@ final class LicenseAPIClient {
             appVersion: Bundle.main.appVersion
         )
 
+        print("[LicenseAPI] Activating with hardware ID: \(hardwareID)")
+        print("[LicenseAPI] Machine name: \(machineName)")
+
         let response: ActivationResponse = try await post(
             endpoint: "/license/activate",
             body: request
