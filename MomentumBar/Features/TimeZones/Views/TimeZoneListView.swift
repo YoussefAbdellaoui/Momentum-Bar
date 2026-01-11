@@ -128,59 +128,118 @@ struct EditTimeZoneView: View {
     @State private var customName: String = ""
     @State private var selectedColor: Color = .blue
     @State private var selectedGroupID: UUID? = nil
+    @State private var teammates: [String] = []
+    @State private var newTeammate: String = ""
 
     var body: some View {
-        VStack(spacing: 20) {
+        VStack(spacing: 16) {
             Text("Edit Time Zone")
                 .font(.headline)
 
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Custom Name")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+            ScrollView {
+                VStack(spacing: 16) {
+                    // Custom Name Section
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Custom Name")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
 
-                TextField("Enter custom name", text: $customName)
-                    .textFieldStyle(.roundedBorder)
+                        TextField("Enter custom name", text: $customName)
+                            .textFieldStyle(.roundedBorder)
 
-                Text("Leave empty to use default name")
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
-            }
+                        Text("Leave empty to use default name")
+                            .font(.caption2)
+                            .foregroundStyle(.tertiary)
+                    }
 
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Group")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    // Group Section
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Group")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
 
-                Picker("Group", selection: $selectedGroupID) {
-                    Text("No Group").tag(nil as UUID?)
-                    ForEach(appState.groups) { group in
-                        HStack {
-                            Image(systemName: group.icon)
-                                .foregroundStyle(group.color)
-                            Text(group.name)
+                        Picker("Group", selection: $selectedGroupID) {
+                            Text("No Group").tag(nil as UUID?)
+                            ForEach(appState.groups) { group in
+                                HStack {
+                                    Image(systemName: group.icon)
+                                        .foregroundStyle(group.color)
+                                    Text(group.name)
+                                }
+                                .tag(group.id as UUID?)
+                            }
                         }
-                        .tag(group.id as UUID?)
+                        .pickerStyle(.menu)
+                        .labelsHidden()
+
+                        if appState.groups.isEmpty {
+                            Text("Create groups in Settings → Time Zones")
+                                .font(.caption2)
+                                .foregroundStyle(.tertiary)
+                        }
+                    }
+
+                    // Teammates Section
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Teammates")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+
+                        // List of teammates
+                        if !teammates.isEmpty {
+                            VStack(spacing: 4) {
+                                ForEach(teammates, id: \.self) { name in
+                                    HStack {
+                                        Text(name)
+                                            .font(.subheadline)
+                                        Spacer()
+                                        Button {
+                                            teammates.removeAll { $0 == name }
+                                        } label: {
+                                            Image(systemName: "xmark.circle.fill")
+                                                .foregroundStyle(.secondary)
+                                        }
+                                        .buttonStyle(.plain)
+                                    }
+                                    .padding(.vertical, 4)
+                                    .padding(.horizontal, 8)
+                                    .background(Color.primary.opacity(0.05))
+                                    .cornerRadius(6)
+                                }
+                            }
+                        }
+
+                        // Add teammate field
+                        HStack(spacing: 8) {
+                            TextField("Add teammate", text: $newTeammate)
+                                .textFieldStyle(.roundedBorder)
+                                .onSubmit {
+                                    addTeammate()
+                                }
+
+                            Button("Add") {
+                                addTeammate()
+                            }
+                            .disabled(newTeammate.trimmingCharacters(in: .whitespaces).isEmpty)
+                        }
+
+                        Text("Add coworkers in this timezone")
+                            .font(.caption2)
+                            .foregroundStyle(.tertiary)
+                    }
+
+                    // Color Section
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Color")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+
+                        ColorPicker("Select color", selection: $selectedColor)
+                            .labelsHidden()
                     }
                 }
-                .pickerStyle(.menu)
-                .labelsHidden()
-
-                if appState.groups.isEmpty {
-                    Text("Create groups in Settings → Time Zones")
-                        .font(.caption2)
-                        .foregroundStyle(.tertiary)
-                }
             }
-
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Color")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-
-                ColorPicker("Select color", selection: $selectedColor)
-                    .labelsHidden()
-            }
+            .frame(maxHeight: 320)
 
             HStack {
                 Button("Cancel") {
@@ -198,12 +257,20 @@ struct EditTimeZoneView: View {
             }
         }
         .padding()
-        .frame(width: 300)
+        .frame(width: 320)
         .onAppear {
             customName = entry.customName ?? ""
             selectedColor = entry.color
             selectedGroupID = entry.groupID
+            teammates = entry.teammates
         }
+    }
+
+    private func addTeammate() {
+        let name = newTeammate.trimmingCharacters(in: .whitespaces)
+        guard !name.isEmpty, !teammates.contains(name) else { return }
+        teammates.append(name)
+        newTeammate = ""
     }
 
     private func saveChanges() {
@@ -211,6 +278,7 @@ struct EditTimeZoneView: View {
         updatedEntry.customName = customName.isEmpty ? nil : customName
         updatedEntry.colorHex = selectedColor.toHex()
         updatedEntry.groupID = selectedGroupID
+        updatedEntry.teammates = teammates
         appState.updateTimeZone(updatedEntry)
         isPresented = false
     }

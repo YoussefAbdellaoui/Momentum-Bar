@@ -57,6 +57,14 @@ struct TimeZoneRowView: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
+
+                // Teammates subtitle
+                if !entry.teammates.isEmpty {
+                    Text(formattedTeammates)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
             }
 
             Spacer()
@@ -108,6 +116,15 @@ struct TimeZoneRowView: View {
         let localDate = appState.formattedDate(for: TimeZone.current)
         let zoneDate = appState.formattedDate(for: tz)
         return localDate != zoneDate
+    }
+
+    private var formattedTeammates: String {
+        let names = entry.teammates
+        if names.count <= 3 {
+            return names.joined(separator: ", ")
+        } else {
+            return "\(names.prefix(2).joined(separator: ", ")) +\(names.count - 2) more"
+        }
     }
 
     private var timeFont: Font {

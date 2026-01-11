@@ -16,6 +16,7 @@ struct TimeZoneEntry: Identifiable, Codable, Hashable {
     var order: Int
     var groupID: UUID?
     var isPinnedToMenuBar: Bool
+    var teammates: [String]
 
     init(
         id: UUID = UUID(),
@@ -24,7 +25,8 @@ struct TimeZoneEntry: Identifiable, Codable, Hashable {
         colorHex: String? = nil,
         order: Int = 0,
         groupID: UUID? = nil,
-        isPinnedToMenuBar: Bool = false
+        isPinnedToMenuBar: Bool = false,
+        teammates: [String] = []
     ) {
         self.id = id
         self.identifier = identifier
@@ -33,9 +35,10 @@ struct TimeZoneEntry: Identifiable, Codable, Hashable {
         self.order = order
         self.groupID = groupID
         self.isPinnedToMenuBar = isPinnedToMenuBar
+        self.teammates = teammates
     }
 
-    // Custom decoder to handle migration from old data without isPinnedToMenuBar
+    // Custom decoder to handle migration from old data
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decode(UUID.self, forKey: .id)
@@ -45,10 +48,11 @@ struct TimeZoneEntry: Identifiable, Codable, Hashable {
         order = try container.decode(Int.self, forKey: .order)
         groupID = try container.decodeIfPresent(UUID.self, forKey: .groupID)
         isPinnedToMenuBar = try container.decodeIfPresent(Bool.self, forKey: .isPinnedToMenuBar) ?? false
+        teammates = try container.decodeIfPresent([String].self, forKey: .teammates) ?? []
     }
 
     private enum CodingKeys: String, CodingKey {
-        case id, identifier, customName, colorHex, order, groupID, isPinnedToMenuBar
+        case id, identifier, customName, colorHex, order, groupID, isPinnedToMenuBar, teammates
     }
 
     var timeZone: TimeZone? {
