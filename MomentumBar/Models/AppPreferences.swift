@@ -43,7 +43,7 @@ struct AppPreferences: Codable, Equatable {
 
     // Startup
     var launchAtLogin: Bool = false
-    var hideDockIcon: Bool = false
+    var hideDockIcon: Bool = true
 
     // Window Behavior
     var keepPopoverPinned: Bool = false

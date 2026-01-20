@@ -149,7 +149,7 @@ enum OnboardingStep: Int, CaseIterable {
         case .pomodoro:
             return "Use the Pomodoro technique to work in focused 25-minute sessions with short breaks. Track your daily focus time."
         case .focusMode:
-            return "Automatically enable macOS Focus mode during Pomodoro sessions or meetings to minimize distractions."
+            return "Automatically enable macOS Focus modes (Do Not Disturb, Work, Personal, Sleep) during Pomodoro sessions or meetings."
         case .getStarted:
             return "Click the menu bar icon anytime to access all features. Customize everything in Settings."
         }

@@ -6,13 +6,16 @@
 //
 
 import Foundation
+import Network
 
 /// Handles communication with the license server for activation and validation
 final class LicenseAPIClient {
 
     // MARK: - Singleton
     static let shared = LicenseAPIClient()
-    private init() {}
+    private init() {
+        startNetworkMonitoringIfNeeded()
+    }
 
     // MARK: - Configuration
 
@@ -122,30 +125,19 @@ final class LicenseAPIClient {
 
     // MARK: - Network Availability
 
-    /// Check if network is available
-    var isNetworkAvailable: Bool {
-        // Simple reachability check
-        var zeroAddress = sockaddr_in()
-        zeroAddress.sin_len = UInt8(MemoryLayout<sockaddr_in>.size)
-        zeroAddress.sin_family = sa_family_t(AF_INET)
+    private let pathMonitor = NWPathMonitor()
+    private let pathMonitorQueue = DispatchQueue(label: "com.momentumbar.license.network")
+    private var _isNetworkAvailable: Bool = true
 
-        guard let defaultRouteReachability = withUnsafePointer(to: &zeroAddress, {
-            $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
-                SCNetworkReachabilityCreateWithAddress(nil, $0)
-            }
-        }) else {
-            return false
+    /// Check if network is available (updated via NWPathMonitor)
+    var isNetworkAvailable: Bool { _isNetworkAvailable }
+
+    private func startNetworkMonitoringIfNeeded() {
+        // If the path monitor has not been started, start it. NWPathMonitor ignores duplicate starts.
+        pathMonitor.pathUpdateHandler = { [weak self] path in
+            self?._isNetworkAvailable = (path.status == .satisfied)
         }
-
-        var flags: SCNetworkReachabilityFlags = []
-        if !SCNetworkReachabilityGetFlags(defaultRouteReachability, &flags) {
-            return false
-        }
-
-        let isReachable = flags.contains(.reachable)
-        let needsConnection = flags.contains(.connectionRequired)
-
-        return isReachable && !needsConnection
+        pathMonitor.start(queue: pathMonitorQueue)
     }
 
     // MARK: - API Methods
@@ -338,5 +330,3 @@ private extension Bundle {
     }
 }
 
-// MARK: - SystemConfiguration Import
-import SystemConfiguration

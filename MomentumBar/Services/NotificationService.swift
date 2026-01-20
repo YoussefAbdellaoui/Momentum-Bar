@@ -30,9 +30,10 @@ final class NotificationService: NSObject, ObservableObject {
     // MARK: - Authorization
 
     func checkAuthorizationStatus() {
-        notificationCenter.getNotificationSettings { [weak self] settings in
+        notificationCenter.getNotificationSettings { settings in
+            let isAuthorized = settings.authorizationStatus == .authorized
             Task { @MainActor in
-                self?.isAuthorized = settings.authorizationStatus == .authorized
+                self.isAuthorized = isAuthorized
             }
         }
     }
@@ -214,3 +215,4 @@ extension NotificationService: UNUserNotificationCenterDelegate {
         }
     }
 }
+

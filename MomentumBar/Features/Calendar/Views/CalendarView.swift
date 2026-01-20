@@ -586,7 +586,7 @@ struct EventRowView: View {
 
             Divider()
 
-            if let onDelete = onDelete {
+            if onDelete != nil {
                 Button(role: .destructive) {
                     showDeleteConfirmation = true
                 } label: {

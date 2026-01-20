@@ -122,8 +122,11 @@ final class FocusModeService {
     func loadAvailableFocusModes() {
         var modes: [SystemFocusMode] = []
 
-        // Always include Do Not Disturb as the default
+        // Add common built-in Focus modes
         modes.append(.doNotDisturb)
+        modes.append(SystemFocusMode(id: "com.apple.focus.work", name: "Work", symbol: "briefcase.fill"))
+        modes.append(SystemFocusMode(id: "com.apple.focus.personal", name: "Personal", symbol: "person.fill"))
+        modes.append(SystemFocusMode(id: "com.apple.focus.sleep", name: "Sleep", symbol: "bed.double.fill"))
 
         // Try to read custom Focus modes from system
         let configPath = NSHomeDirectory() + "/Library/DoNotDisturb/DB/ModeConfigurations.json"
@@ -136,8 +139,8 @@ final class FocusModeService {
                 if let mode = config["mode"] as? [String: Any],
                    let id = mode["identifier"] as? String,
                    let name = mode["name"] as? String {
-                    // Skip the default DND mode as we already added it
-                    if id != "com.apple.donotdisturb.mode.default" {
+                    // Skip if we already added this mode
+                    if !modes.contains(where: { $0.id == id }) {
                         let symbol = mode["symbolImageName"] as? String
                         modes.append(SystemFocusMode(id: id, name: name, symbol: symbol))
                     }
@@ -146,6 +149,7 @@ final class FocusModeService {
         }
 
         availableFocusModes = modes
+        print("[FocusModeService] Detected \(modes.count) Focus modes: \(modes.map { $0.displayName }.joined(separator: ", "))")
     }
 
     /// Check if a Focus mode is currently active

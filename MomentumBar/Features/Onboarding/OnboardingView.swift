@@ -12,7 +12,9 @@ struct OnboardingView: View {
     @State private var onboardingService = OnboardingService.shared
     @State private var calendarService = CalendarService.shared
     @State private var focusService = FocusModeService.shared
+    @State private var shortcutInstaller = ShortcutInstaller.shared
     @State private var showFocusSetup = false
+    @State private var isInstallingShortcuts = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -150,11 +152,25 @@ struct OnboardingView: View {
             }
 
         case .focusMode:
-            if !focusService.isSetupComplete {
-                Button(step.actionTitle ?? "Setup") {
-                    showFocusSetup = true
+            if !shortcutInstaller.hasInstalledShortcuts {
+                Button(isInstallingShortcuts ? "Installing..." : "Auto-Install Focus Shortcuts") {
+                    Task {
+                        isInstallingShortcuts = true
+                        // Install shortcuts for all detected Focus modes
+                        _ = await shortcutInstaller.installShortcutsForDetectedModes(focusService.availableFocusModes)
+                        isInstallingShortcuts = false
+                        focusService.completeSetup()
+                    }
                 }
                 .buttonStyle(.bordered)
+                .disabled(isInstallingShortcuts)
+
+                if !focusService.availableFocusModes.isEmpty {
+                    Text("Installing shortcuts for: \(focusService.availableFocusModes.map { $0.displayName }.joined(separator: ", "))")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .padding(.top, 4)
+                }
             }
 
         default:
@@ -177,12 +193,18 @@ struct OnboardingView: View {
     @ViewBuilder
     private var focusStatusIndicator: some View {
         HStack(spacing: 8) {
-            Image(systemName: focusService.isSetupComplete ? "checkmark.circle.fill" : "circle")
-                .foregroundStyle(focusService.isSetupComplete ? .green : .secondary)
+            Image(systemName: shortcutInstaller.hasInstalledShortcuts ? "checkmark.circle.fill" : "circle")
+                .foregroundStyle(shortcutInstaller.hasInstalledShortcuts ? .green : .secondary)
 
-            Text(focusService.isSetupComplete ? "Focus Mode configured" : "Focus Mode not configured")
-                .font(.caption)
-                .foregroundStyle(focusService.isSetupComplete ? .primary : .secondary)
+            if isInstallingShortcuts {
+                Text("Installing shortcuts...")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            } else {
+                Text(shortcutInstaller.hasInstalledShortcuts ? "Focus shortcuts installed" : "Focus shortcuts not installed")
+                    .font(.caption)
+                    .foregroundStyle(shortcutInstaller.hasInstalledShortcuts ? .primary : .secondary)
+            }
         }
     }
 }
