@@ -21,7 +21,7 @@ struct AppPreferences: Codable, Equatable {
 
     // Display
     var showDayNightIndicator: Bool = true
-    var menuBarDisplayMode: MenuBarDisplayMode = .icon
+    var menuBarDisplayMode: MenuBarDisplayMode = .iconAndTime
 
     // Day/Night Detection
     var useAccurateSunriseSunset: Bool = true
@@ -39,11 +39,11 @@ struct AppPreferences: Codable, Equatable {
 
     // Menu Bar
     var showMeetingBadge: Bool = true
-    var showNextMeetingTime: Bool = false
+    var showNextMeetingTime: Bool = true
 
     // Startup
     var launchAtLogin: Bool = false
-    var hideDockIcon: Bool = true
+    var hideDockIcon: Bool = false
 
     // Window Behavior
     var keepPopoverPinned: Bool = false

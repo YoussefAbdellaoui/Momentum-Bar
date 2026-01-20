@@ -79,25 +79,10 @@ final class StorageService {
     static let appGroupSuite = "group.com.momentumbar.shared"
 
     private init() {
-        // Try to initialize shared defaults, but gracefully handle if app group isn't available
-        if let shared = UserDefaults(suiteName: StorageService.appGroupSuite) {
-            // Test if we can actually write to the app group
-            let testKey = "com.momentumbar.appGroupTest"
-            shared.set(true, forKey: testKey)
-            if shared.bool(forKey: testKey) {
-                shared.removeObject(forKey: testKey)
-                self.sharedDefaults = shared
-                self.isAppGroupAvailable = true
-            } else {
-                self.sharedDefaults = nil
-                self.isAppGroupAvailable = false
-                print("App Group not available: Unable to write to shared container. Widget sync disabled.")
-            }
-        } else {
-            self.sharedDefaults = nil
-            self.isAppGroupAvailable = false
-            print("App Group not available: Could not create UserDefaults suite. Widget sync disabled.")
-        }
+        // Disable app group until proper Apple Developer provisioning is in place
+        // This prevents SQLite errors during development
+        self.sharedDefaults = nil
+        self.isAppGroupAvailable = false
     }
 
     // MARK: - Time Zones
@@ -135,8 +120,12 @@ final class StorageService {
             let preferences = loadPreferences()
             sharedDefaults.set(preferences.use24HourFormat, forKey: Keys.sharedUse24Hour)
 
-            // Tell WidgetKit to reload
-            WidgetCenter.shared.reloadAllTimelines()
+            // Tell WidgetKit to reload (wrapped in try/catch to prevent crashes)
+            do {
+                WidgetCenter.shared.reloadAllTimelines()
+            } catch {
+                print("Failed to reload widget timelines: \(error)")
+            }
         } catch {
             print("Failed to sync timezones to widget: \(error)")
         }
@@ -274,8 +263,12 @@ final class StorageService {
             let data = try encoder.encode(state)
             sharedDefaults.set(data, forKey: Keys.sharedPomodoroState)
 
-            // Reload pomodoro widget
-            WidgetCenter.shared.reloadTimelines(ofKind: "PomodoroWidget")
+            // Reload pomodoro widget (wrapped in try/catch to prevent crashes)
+            do {
+                WidgetCenter.shared.reloadTimelines(ofKind: "PomodoroWidget")
+            } catch {
+                print("Failed to reload pomodoro widget: \(error)")
+            }
         } catch {
             print("Failed to save pomodoro state: \(error)")
         }

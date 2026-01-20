@@ -29,6 +29,9 @@ class MenuBarController {
 
         MenuBarController.shared = self
 
+        // Make status item visible
+        statusItem.isVisible = true
+
         setupPopover()
         configureStatusButton()
         setupEventMonitor()
@@ -168,21 +171,28 @@ class MenuBarController {
             displayText = " " + formattedMenuBarTime(preferences: preferences)
         }
 
-        // Add pinned timezones
-        let pinnedDisplay = formattedPinnedTimeZones(preferences: preferences)
-        if !pinnedDisplay.isEmpty {
-            if displayText.isEmpty {
-                displayText = pinnedDisplay
-            } else {
-                displayText += " | " + pinnedDisplay
+        // Add pinned timezones (skip if icon-only mode)
+        if preferences.menuBarDisplayMode != .icon {
+            let pinnedDisplay = formattedPinnedTimeZones(preferences: preferences)
+            if !pinnedDisplay.isEmpty {
+                if displayText.isEmpty {
+                    displayText = pinnedDisplay
+                } else {
+                    displayText += " | " + pinnedDisplay
+                }
             }
         }
 
-        // Add next meeting time if enabled
+        // Add next meeting countdown if enabled (works in all modes)
         if preferences.showNextMeetingTime, let next = nextMeeting {
             let minutes = next.minutesUntilStart
-            if minutes <= 60 {
-                displayText += " | \(minutes)m"
+            if minutes > 0 && minutes <= 60 {
+                let meetingText = "\(minutes)m"
+                if displayText.isEmpty {
+                    displayText = meetingText
+                } else {
+                    displayText += " | " + meetingText
+                }
             }
         }
 

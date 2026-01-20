@@ -103,11 +103,13 @@ struct LicenseSettingsView: View {
                 Text("Activate License")
             }
 
-            // Purchase Section
-            Section {
-                PurchaseOptionsView()
-            } header: {
-                Text("Purchase")
+            // Purchase Section (only show if not licensed)
+            if !licenseService.isLicensed {
+                Section {
+                    PurchaseOptionsView()
+                } header: {
+                    Text("Purchase")
+                }
             }
 
             // Error Display
