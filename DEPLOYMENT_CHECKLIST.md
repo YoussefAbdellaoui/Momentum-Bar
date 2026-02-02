@@ -217,6 +217,11 @@ railway up
 railway run npm run db:init
 ```
 
+**Migrate existing Stripe columns (one-time):**
+```bash
+railway run npm run db:migrate:dodo
+```
+
 **Test deployment:**
 ```bash
 curl https://your-railway-url/health
@@ -230,11 +235,12 @@ curl https://your-railway-url/health
 | `DATABASE_URL` | Auto-provided by Railway | N/A |
 | `NODE_ENV` | `production` | Manual |
 | `PORT` | `3000` | Manual |
-| `STRIPE_SECRET_KEY` | `sk_live_...` | dashboard.stripe.com/apikeys |
-| `STRIPE_WEBHOOK_SECRET` | `whsec_...` | After creating webhook |
-| `STRIPE_PRICE_SOLO` | `price_...` | After creating products |
-| `STRIPE_PRICE_MULTIPLE` | `price_...` | After creating products |
-| `STRIPE_PRICE_ENTERPRISE` | `price_...` | After creating products |
+| `DODO_PAYMENTS_API_KEY` | `dodo_live_...` | Dodo Payments dashboard |
+| `DODO_PAYMENTS_WEBHOOK_KEY` | `whk_...` | Dodo Payments webhook settings |
+| `DODO_PAYMENTS_ENVIRONMENT` | `live_mode` | Manual (`test_mode` or `live_mode`) |
+| `DODO_PRODUCT_SOLO` | `prod_...` | Dodo Payments product catalog |
+| `DODO_PRODUCT_MULTIPLE` | `prod_...` | Dodo Payments product catalog |
+| `DODO_PRODUCT_ENTERPRISE` | `prod_...` | Dodo Payments product catalog |
 | `RESEND_API_KEY` | `re_...` | resend.com/api-keys |
 | `EMAIL_FROM` | `MomentumBar <noreply@yourdomain.com>` | Your verified domain |
 | `ADMIN_API_KEY` | Generate random string | Use: `openssl rand -hex 32` |
@@ -247,67 +253,55 @@ curl https://your-railway-url/health
 
 ---
 
-### 4. 💰 Configure Stripe
+### 4. 💰 Configure Dodo Payments
 **Status:** ❌ NOT STARTED
 **Priority:** HIGH
 **Timeline:** 1-2 hours
 
 **Steps:**
 
-**A. Create Stripe Account**
-- [ ] Sign up at https://stripe.com
+**A. Create Dodo Payments Account**
+- [ ] Sign up in the Dodo Payments dashboard
 - [ ] Complete business verification
 - [ ] Switch to Live mode (important!)
 
 **B. Create Products**
-- [ ] Go to https://dashboard.stripe.com/products
+- [ ] Create 3 products in Dodo Payments:
 - [ ] Create 3 products:
 
 **Solo Tier:**
 - Name: "MomentumBar Solo"
 - Price: $14.99 USD
 - Type: One-time payment
-- Copy `price_...` ID → Add to Railway env as `STRIPE_PRICE_SOLO`
+- Copy `prod_...` ID → Add to Railway env as `DODO_PRODUCT_SOLO`
 
 **Multiple Tier:**
 - Name: "MomentumBar Multiple"
 - Price: $24.99 USD
 - Type: One-time payment
-- Copy `price_...` ID → Add to Railway env as `STRIPE_PRICE_MULTIPLE`
+- Copy `prod_...` ID → Add to Railway env as `DODO_PRODUCT_MULTIPLE`
 
 **Enterprise Tier:**
 - Name: "MomentumBar Enterprise"
 - Price: $64.99 USD
 - Type: One-time payment
-- Copy `price_...` ID → Add to Railway env as `STRIPE_PRICE_ENTERPRISE`
+- Copy `prod_...` ID → Add to Railway env as `DODO_PRODUCT_ENTERPRISE`
 
 **C. Configure Webhook**
-- [ ] Go to https://dashboard.stripe.com/webhooks
-- [ ] Click "Add endpoint"
-- [ ] URL: `https://your-railway-url/webhooks/stripe`
-- [ ] Events to listen: Select `checkout.session.completed`
-- [ ] Copy webhook signing secret → Add to Railway as `STRIPE_WEBHOOK_SECRET`
+- [ ] Add a webhook endpoint in Dodo Payments
+- [ ] URL: `https://your-railway-url/webhooks/dodo`
+- [ ] Events to listen: `payment.succeeded` (and `payment.failed` if desired)
+- [ ] Copy webhook key → Add to Railway as `DODO_PAYMENTS_WEBHOOK_KEY`
 
 **D. Get API Keys**
-- [ ] Go to https://dashboard.stripe.com/apikeys
-- [ ] Copy "Secret key" (starts with `sk_live_...`)
-- [ ] Add to Railway env as `STRIPE_SECRET_KEY`
-- [ ] Copy "Publishable key" (starts with `pk_live_...`)
-- [ ] Save for website integration
+- [ ] Copy "API key"
+- [ ] Add to Railway env as `DODO_PAYMENTS_API_KEY`
+- [ ] Set `DODO_PAYMENTS_ENVIRONMENT` to `test_mode` while testing, then `live_mode`
 
-**E. Test Payment (Use Stripe Test Mode First!)**
-```bash
-# Create test checkout session
-curl -X POST https://your-railway-url/api/v1/checkout \
-  -H "Content-Type: application/json" \
-  -d '{"priceId":"price_..."}'
-
-# Should return: {"sessionId":"cs_test_..."}
-```
-
-**Test cards:**
-- Success: 4242 4242 4242 4242
-- Decline: 4000 0000 0000 0002
+**E. Test Payment (Use Dodo Payments Test Mode First!)**
+- [ ] Open your Dodo checkout link for the Solo product
+- [ ] Complete a test purchase with Dodo’s test card details (from their docs)
+- [ ] Confirm the backend received `payment.succeeded` and generated a license
 
 ---
 
@@ -407,11 +401,11 @@ curl -X POST https://your-railway-url/api/v1/license/validate \
 # Expected: {"valid":false,"message":"License not found"}
 ```
 
-**Stripe Webhook (manual test via Stripe dashboard):**
-- [ ] Go to Stripe Dashboard → Webhooks
+**Dodo Payments webhook (manual test via dashboard):**
+- [ ] Go to Dodo Payments dashboard → Webhooks
 - [ ] Click your webhook endpoint
 - [ ] Click "Send test webhook"
-- [ ] Select `checkout.session.completed`
+- [ ] Select `payment.succeeded`
 - [ ] Verify backend receives and processes it
 
 **Database Connection:**
@@ -773,28 +767,26 @@ export default function HomePage() {
 
 **B. Add Pricing/Purchase Page**
 
-Create Stripe Checkout integration:
+Create Dodo Payments checkout integration:
 
 ```tsx
 // app/pricing/page.tsx
 'use client';
 
-import { loadStripe } from '@stripe/stripe-js';
+const checkoutBaseUrl =
+  process.env.NEXT_PUBLIC_DODO_CHECKOUT_BASE_URL ||
+  'https://checkout.dodopayments.com/buy';
+const redirectUrl = process.env.NEXT_PUBLIC_DODO_CHECKOUT_REDIRECT_URL;
 
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
+const buildCheckoutUrl = (productId: string) => {
+  const base = `${checkoutBaseUrl}/${productId}`;
+  if (!redirectUrl) return base;
+  return `${base}?redirect_url=${encodeURIComponent(redirectUrl)}`;
+};
 
 export default function PricingPage() {
-  const handlePurchase = async (priceId: string) => {
-    const stripe = await stripePromise;
-
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/checkout`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ priceId, email: '' }), // Collect email in Stripe checkout
-    });
-
-    const { sessionId } = await response.json();
-    await stripe?.redirectToCheckout({ sessionId });
+  const handlePurchase = (productId: string) => {
+    window.location.href = buildCheckoutUrl(productId);
   };
 
   return (
@@ -812,7 +804,7 @@ export default function PricingPage() {
             <li>Free updates</li>
             <li>Email support</li>
           </ul>
-          <button onClick={() => handlePurchase(process.env.NEXT_PUBLIC_STRIPE_PRICE_SOLO!)}>
+          <button onClick={() => handlePurchase(process.env.NEXT_PUBLIC_DODO_PRODUCT_SOLO!)}>
             Purchase Solo
           </button>
         </div>
@@ -827,7 +819,7 @@ export default function PricingPage() {
             <li>Free updates</li>
             <li>Priority support</li>
           </ul>
-          <button onClick={() => handlePurchase(process.env.NEXT_PUBLIC_STRIPE_PRICE_MULTIPLE!)}>
+          <button onClick={() => handlePurchase(process.env.NEXT_PUBLIC_DODO_PRODUCT_MULTIPLE!)}>
             Purchase Multiple
           </button>
         </div>
@@ -842,7 +834,7 @@ export default function PricingPage() {
             <li>Free updates</li>
             <li>Priority support</li>
           </ul>
-          <button onClick={() => handlePurchase(process.env.NEXT_PUBLIC_STRIPE_PRICE_ENTERPRISE!)}>
+          <button onClick={() => handlePurchase(process.env.NEXT_PUBLIC_DODO_PRODUCT_ENTERPRISE!)}>
             Purchase Enterprise
           </button>
         </div>
@@ -856,7 +848,11 @@ export default function PricingPage() {
 
 Create `.env.production`:
 ```bash
-NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_live_...
+NEXT_PUBLIC_DODO_CHECKOUT_BASE_URL=https://checkout.dodopayments.com/buy
+NEXT_PUBLIC_DODO_CHECKOUT_REDIRECT_URL=https://momentumbar.app/success
+NEXT_PUBLIC_DODO_PRODUCT_SOLO=prod_...
+NEXT_PUBLIC_DODO_PRODUCT_MULTIPLE=prod_...
+NEXT_PUBLIC_DODO_PRODUCT_ENTERPRISE=prod_...
 NEXT_PUBLIC_API_URL=https://momentum-bar-production.up.railway.app
 NEXT_PUBLIC_DMG_URL=https://github.com/YoussefAbdellaoui/Momentum-Bar/releases/download/v1.0.0/MomentumBar-1.0.dmg
 ```
@@ -930,8 +926,8 @@ sudo dscl . -passwd /Users/testuser password
 **Purchase & Activation Flow:**
 - [ ] Go to website pricing page
 - [ ] Click "Purchase Solo"
-- [ ] Stripe checkout loads
-- [ ] Complete payment with test card (4242 4242 4242 4242)
+- [ ] Dodo checkout loads
+- [ ] Complete payment in test mode
 - [ ] Receive license key email
 - [ ] Copy license key
 - [ ] Open app → Settings → License
@@ -1014,7 +1010,7 @@ sudo dscl . -passwd /Users/testuser password
 - [ ] Set up error tracking (Sentry, Bugsnag)
 - [ ] Set up analytics (Plausible, Fathom)
 - [ ] Monitor Railway logs
-- [ ] Monitor Stripe dashboard
+- [ ] Monitor Dodo Payments dashboard
 - [ ] Set up uptime monitoring (UptimeRobot)
 
 ---
@@ -1031,12 +1027,12 @@ sudo dscl . -passwd /Users/testuser password
 **Backend Health Check:**
 - [ ] Railway server running: `curl https://your-railway-url/health`
 - [ ] Database connected: `railway run psql $DATABASE_URL -c "SELECT 1;"`
-- [ ] Stripe live mode enabled
+- [ ] Dodo Payments live mode enabled
 - [ ] Resend emails working
 
 **Website Check:**
 - [ ] Download link works
-- [ ] Stripe checkout works
+- [ ] Dodo checkout works
 - [ ] All pages load correctly
 - [ ] Mobile responsive
 - [ ] SSL certificate valid
@@ -1048,8 +1044,8 @@ sudo dscl . -passwd /Users/testuser password
 - [ ] All features functional
 
 **Switch to Production:**
-- [ ] Stripe: Switch from Test mode to Live mode
-- [ ] Update all Stripe environment variables in Railway
+- [ ] Dodo Payments: Switch from Test mode to Live mode
+- [ ] Update all Dodo Payments environment variables in Railway
 - [ ] Test one real purchase (then refund if needed)
 - [ ] Verify license email arrives
 
@@ -1078,7 +1074,7 @@ sudo dscl . -passwd /Users/testuser password
 |--------|--------|----------------|
 | Downloads | 100+ day 1 | GitHub release stats |
 | Trial activations | 50+ day 1 | Railway logs |
-| Purchases | 5+ day 1 | Stripe dashboard |
+| Purchases | 5+ day 1 | Dodo Payments dashboard |
 | Conversion rate | 5%+ | Purchases / Trials |
 | Support tickets | < 10 day 1 | Support email |
 | Crashes | 0 | Error tracking |
@@ -1098,7 +1094,7 @@ sudo dscl . -passwd /Users/testuser password
 **Solution:** System Preferences → Security & Privacy → Calendar → Grant access.
 
 ### Issue: License activation fails
-**Solution:** Check backend logs, verify network connectivity, check Stripe webhook.
+**Solution:** Check backend logs, verify network connectivity, check Dodo Payments webhook.
 
 ### Issue: App doesn't appear in menu bar
 **Solution:** Check display settings, verify menu bar isn't full, restart app.
@@ -1117,14 +1113,14 @@ sudo dscl . -passwd /Users/testuser password
 - [ ] ✅ Developer ID certificate obtained
 - [ ] ✅ Backend deployed to Railway
 - [ ] ✅ PostgreSQL database initialized
-- [ ] ✅ Stripe configured (products, webhook, live mode)
+- [ ] ✅ Dodo Payments configured (products, webhook, live mode)
 - [ ] ✅ Resend configured (domain verified, API key)
 - [ ] ✅ App built and signed
 - [ ] ✅ App notarized by Apple
 - [ ] ✅ DMG created and notarized
 - [ ] ✅ DMG uploaded to GitHub Releases
 - [ ] ✅ Website updated with download link
-- [ ] ✅ Pricing page with Stripe integration
+- [ ] ✅ Pricing page with Dodo Payments integration
 - [ ] ✅ Privacy policy published
 - [ ] ✅ Terms of service published
 - [ ] ✅ Support email configured
@@ -1148,9 +1144,9 @@ sudo dscl . -passwd /Users/testuser password
 - Support: https://railway.app/help
 - Discord: https://discord.gg/railway
 
-**Stripe:**
-- Support: https://support.stripe.com
-- Dashboard: https://dashboard.stripe.com
+**Dodo Payments:**
+- Support: See Dodo Payments dashboard support links
+- Dashboard: https://app.dodopayments.com
 
 **Resend:**
 - Support: support@resend.com

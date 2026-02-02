@@ -3,7 +3,7 @@
 ## Overview
 
 This guide explains how to build a backend API to handle:
-1. Stripe payment processing
+1. Dodo Payments processing
 2. License key generation
 3. Email delivery with activation keys
 4. License activation and validation
@@ -14,8 +14,8 @@ This guide explains how to build a backend API to handle:
 
 ```
 ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│   Stripe    │────▶│  Your API   │────▶│  Database   │
-│  Checkout   │     │  (Backend)  │     │ (PostgreSQL)│
+│   Dodo      │────▶│  Your API   │────▶│  Database   │
+│  Payments   │     │  (Backend)  │     │ (PostgreSQL)│
 └─────────────┘     └─────────────┘     └─────────────┘
        │                   │
        │                   ▼
@@ -45,7 +45,7 @@ This guide explains how to build a backend API to handle:
 - **Runtime**: Node.js or Python
 - **Framework**: Express.js (Node) or FastAPI (Python)
 - **Database**: PostgreSQL (or Supabase for managed)
-- **Payments**: Stripe Checkout
+- **Payments**: Dodo Payments checkout links
 - **Email**: Resend, SendGrid, or AWS SES
 - **Hosting**: Railway, Render, Fly.io, or Vercel
 
@@ -62,8 +62,8 @@ CREATE TABLE licenses (
     license_key VARCHAR(24) UNIQUE NOT NULL,
     tier VARCHAR(20) NOT NULL CHECK (tier IN ('solo', 'multiple', 'enterprise')),
     email VARCHAR(255) NOT NULL,
-    stripe_customer_id VARCHAR(255),
-    stripe_payment_id VARCHAR(255),
+    dodo_customer_id VARCHAR(255),
+    dodo_payment_id VARCHAR(255),
     max_machines INT NOT NULL DEFAULT 1,
     purchase_date TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     status VARCHAR(20) DEFAULT 'active' CHECK (status IN ('active', 'revoked', 'expired')),
@@ -147,13 +147,13 @@ def generate_license_key(tier: str) -> str:
 
 ## API Endpoints
 
-### 1. Stripe Webhook (receives payment events)
+### 1. Dodo Payments Webhook (receives payment events)
 
 ```
-POST /webhooks/stripe
+POST /webhooks/dodo
 ```
 
-This endpoint receives Stripe webhook events when a payment succeeds.
+This endpoint receives Dodo Payments webhook events when a payment succeeds.
 
 ### 2. Activate License
 
@@ -246,7 +246,7 @@ license-api/
 │   ├── config/
 │   │   └── database.js   # DB connection
 │   ├── routes/
-│   │   ├── webhooks.js   # Stripe webhooks
+│   │   ├── webhooks.js   # Dodo Payments webhooks
 │   │   └── license.js    # License endpoints
 │   ├── services/
 │   │   ├── license.js    # License logic
@@ -270,7 +270,7 @@ license-api/
   "dependencies": {
     "express": "^4.18.2",
     "pg": "^8.11.3",
-    "stripe": "^14.10.0",
+    "dodopayments": "^1.52.5",
     "resend": "^2.1.0",
     "dotenv": "^16.3.1",
     "cors": "^2.8.5"
@@ -291,12 +291,13 @@ NODE_ENV=development
 # Database
 DATABASE_URL=postgresql://user:password@localhost:5432/momentumbar
 
-# Stripe
-STRIPE_SECRET_KEY=sk_test_...
-STRIPE_WEBHOOK_SECRET=whsec_...
-STRIPE_SOLO_PRICE_ID=price_...
-STRIPE_MULTI_PRICE_ID=price_...
-STRIPE_ENTERPRISE_PRICE_ID=price_...
+# Dodo Payments
+DODO_PAYMENTS_API_KEY=dodo_test_...
+DODO_PAYMENTS_WEBHOOK_KEY=whk_...
+DODO_PAYMENTS_ENVIRONMENT=test_mode
+DODO_PRODUCT_SOLO=prod_...
+DODO_PRODUCT_MULTIPLE=prod_...
+DODO_PRODUCT_ENTERPRISE=prod_...
 
 # Email (Resend)
 RESEND_API_KEY=re_...
@@ -314,8 +315,8 @@ const licenseRouter = require('./routes/license');
 
 const app = express();
 
-// Stripe webhooks need raw body
-app.use('/webhooks/stripe', express.raw({ type: 'application/json' }));
+// Dodo Payments webhooks need raw body
+app.use('/webhooks/dodo', express.raw({ type: 'application/json' }));
 
 // Other routes use JSON
 app.use(express.json());
@@ -443,7 +444,7 @@ module.exports = { sendLicenseEmail };
 const pool = require('../config/database');
 const { generateLicenseKey } = require('../utils/keygen');
 
-async function createLicense(email, tier, stripeCustomerId, stripePaymentId) {
+async function createLicense(email, tier, dodoCustomerId, dodoPaymentId) {
     const licenseKey = generateLicenseKey(tier);
 
     const maxMachines = {
@@ -454,10 +455,10 @@ async function createLicense(email, tier, stripeCustomerId, stripePaymentId) {
 
     const result = await pool.query(
         `INSERT INTO licenses
-         (license_key, tier, email, stripe_customer_id, stripe_payment_id, max_machines)
+         (license_key, tier, email, dodo_customer_id, dodo_payment_id, max_machines)
          VALUES ($1, $2, $3, $4, $5, $6)
          RETURNING *`,
-        [licenseKey, tier, email, stripeCustomerId, stripePaymentId, maxMachines]
+        [licenseKey, tier, email, dodoCustomerId, dodoPaymentId, maxMachines]
     );
 
     return result.rows[0];
@@ -547,65 +548,66 @@ module.exports = {
 
 ```javascript
 const express = require('express');
-const Stripe = require('stripe');
+const DodoPayments = require('dodopayments');
 const licenseService = require('../services/license');
 const emailService = require('../services/email');
 
 const router = express.Router();
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+const dodo = new DodoPayments({
+    bearerToken: process.env.DODO_PAYMENTS_API_KEY,
+    environment: process.env.DODO_PAYMENTS_ENVIRONMENT,
+    webhookKey: process.env.DODO_PAYMENTS_WEBHOOK_KEY
+});
 
-// Map Stripe price IDs to tiers
-const PRICE_TO_TIER = {
-    [process.env.STRIPE_SOLO_PRICE_ID]: 'solo',
-    [process.env.STRIPE_MULTI_PRICE_ID]: 'multiple',
-    [process.env.STRIPE_ENTERPRISE_PRICE_ID]: 'enterprise'
+// Map Dodo product IDs to tiers
+const PRODUCT_TO_TIER = {
+    [process.env.DODO_PRODUCT_SOLO]: 'solo',
+    [process.env.DODO_PRODUCT_MULTIPLE]: 'multiple',
+    [process.env.DODO_PRODUCT_ENTERPRISE]: 'enterprise'
 };
 
-router.post('/stripe', async (req, res) => {
-    const sig = req.headers['stripe-signature'];
+router.post('/dodo', async (req, res) => {
     let event;
 
     try {
-        event = stripe.webhooks.constructEvent(
-            req.body,
-            sig,
-            process.env.STRIPE_WEBHOOK_SECRET
-        );
+        event = await dodo.webhooks.unwrap(req.body.toString(), {
+            headers: {
+                'webhook-id': req.headers['webhook-id'],
+                'webhook-signature': req.headers['webhook-signature'],
+                'webhook-timestamp': req.headers['webhook-timestamp']
+            }
+        });
     } catch (err) {
         console.error('Webhook signature verification failed:', err.message);
-        return res.status(400).send(`Webhook Error: ${err.message}`);
+        return res.status(401).send(`Webhook Error: ${err.message}`);
     }
 
-    // Handle the event
-    if (event.type === 'checkout.session.completed') {
-        const session = event.data.object;
+    if (event.type === 'payment.succeeded') {
+        const payload = event?.data || event?.payload?.data || {};
+        const payment = payload?.object || payload;
+        const email = payment?.customer?.email || payment?.customer_email;
+        const metadata = payment?.metadata || payment?.object?.metadata || {};
+        const productId = payment?.product_id || payment?.items?.[0]?.product_id;
+        const tier = metadata.tier || PRODUCT_TO_TIER[productId] || 'solo';
 
         try {
-            // Get line items to determine tier
-            const lineItems = await stripe.checkout.sessions.listLineItems(session.id);
-            const priceId = lineItems.data[0]?.price?.id;
-            const tier = PRICE_TO_TIER[priceId] || 'solo';
-
-            // Create license
             const license = await licenseService.createLicense(
-                session.customer_email,
+                email,
                 tier,
-                session.customer,
-                session.payment_intent
+                payment?.customer?.customer_id || payment?.customer?.id,
+                payment?.payment_id || payment?.id
             );
 
-            console.log(`License created: ${license.license_key} for ${session.customer_email}`);
+            console.log(`License created: ${license.license_key} for ${email}`);
 
-            // Send email with license key
             await emailService.sendLicenseEmail(
-                session.customer_email,
+                email,
                 license.license_key,
                 tier
             );
-
         } catch (error) {
             console.error('Error processing payment:', error);
-            // Don't return error to Stripe - log and handle manually
+            // Don't return error to the webhook - log and handle manually
         }
     }
 
@@ -772,49 +774,38 @@ module.exports = router;
 
 ---
 
-## Stripe Setup
+## Dodo Payments Setup
 
-### 1. Create Products in Stripe Dashboard
+### 1. Create Products in Dodo Payments Dashboard
 
-Go to Stripe Dashboard → Products → Add Product:
+Create 3 products and copy their product IDs:
 
-| Product | Price | Price ID |
-|---------|-------|----------|
-| MomentumBar Solo | $14.99 (one-time) | price_xxx |
-| MomentumBar Multiple | $24.99 (one-time) | price_yyy |
-| MomentumBar Enterprise | $64.99 (one-time) | price_zzz |
+| Product | Price | Product ID |
+|---------|-------|------------|
+| MomentumBar Solo | $14.99 (one-time) | prod_xxx |
+| MomentumBar Multiple | $24.99 (one-time) | prod_yyy |
+| MomentumBar Enterprise | $64.99 (one-time) | prod_zzz |
 
 ### 2. Create Checkout Links
 
-For your website, create Stripe Checkout links:
+Dodo Payments provides a hosted checkout link per product:
 
-```javascript
-// Example: Create checkout session
-const session = await stripe.checkout.sessions.create({
-    mode: 'payment',
-    line_items: [{
-        price: 'price_xxx', // Your Solo price ID
-        quantity: 1
-    }],
-    success_url: 'https://momentumbar.app/success',
-    cancel_url: 'https://momentumbar.app/cancel',
-    customer_email: customerEmail // Optional: pre-fill email
-});
-
-// Redirect user to session.url
+```
+https://checkout.dodopayments.com/buy/{product_id}
 ```
 
-Or use Stripe Payment Links (no code needed):
-1. Go to Stripe Dashboard → Payment Links
-2. Create link for each product
-3. Use those links on your website
+Append the required redirect URL (and optional quantity) after purchase:
+
+```
+https://checkout.dodopayments.com/buy/{product_id}?quantity=1&redirect_url=https://momentumbar.app/success
+```
 
 ### 3. Setup Webhook
 
-1. Go to Stripe Dashboard → Developers → Webhooks
-2. Add endpoint: `https://your-api.com/webhooks/stripe`
-3. Select event: `checkout.session.completed`
-4. Copy the signing secret to your `.env`
+1. Go to Dodo Payments dashboard → Webhooks
+2. Add endpoint: `https://your-api.com/webhooks/dodo`
+3. Select event: `payment.succeeded` (optionally `payment.failed`)
+4. Copy the webhook key to your `.env`
 
 ---
 
@@ -879,21 +870,10 @@ private let baseURL = "https://your-railway-app.up.railway.app/api/v1"
 
 ## Testing
 
-### Test with Stripe CLI
+### Test with Dodo Payments
 
-```bash
-# Install Stripe CLI
-brew install stripe/stripe-cli/stripe
-
-# Login
-stripe login
-
-# Forward webhooks to local server
-stripe listen --forward-to localhost:3000/webhooks/stripe
-
-# Trigger test payment
-stripe trigger checkout.session.completed
-```
+- Use Dodo Payments test mode and a test checkout link.
+- Send a test `payment.succeeded` webhook from the Dodo Payments dashboard.
 
 ### Test Activation Flow
 
@@ -913,7 +893,7 @@ curl -X POST http://localhost:3000/api/v1/license/activate \
 ## Security Checklist
 
 - [ ] Use HTTPS in production
-- [ ] Validate Stripe webhook signatures
+- [ ] Validate Dodo Payments webhook signatures
 - [ ] Rate limit API endpoints
 - [ ] Use parameterized SQL queries (done)
 - [ ] Store secrets in environment variables
@@ -924,16 +904,16 @@ curl -X POST http://localhost:3000/api/v1/license/activate \
 
 ## Summary
 
-1. **Setup Stripe** - Create products and payment links
+1. **Setup Dodo Payments** - Create products and checkout links
 2. **Deploy API** - Use Railway, Render, or your preferred host
-3. **Configure Webhook** - Point Stripe to your `/webhooks/stripe` endpoint
+3. **Configure Webhook** - Point Dodo Payments to your `/webhooks/dodo` endpoint
 4. **Update App** - Change the `baseURL` in `LicenseAPIClient.swift`
-5. **Test** - Use Stripe test mode to verify the flow
+5. **Test** - Use Dodo Payments test mode to verify the flow
 
 The flow will be:
 1. User clicks "Purchase" on your website
-2. Stripe Checkout handles payment
-3. Stripe sends webhook to your API
+2. Dodo Payments checkout handles payment
+3. Dodo Payments sends webhook to your API
 4. API creates license and sends email
 5. User enters key in MomentumBar app
 6. App calls your API to activate

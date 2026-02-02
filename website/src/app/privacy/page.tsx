@@ -94,7 +94,7 @@ export default function PrivacyPage() {
 
                   <h3 className="text-xl font-semibold text-white mb-3 mt-6">Purchase Information</h3>
                   <p>
-                    Purchases are processed through Stripe. We receive your email address and purchase details, but we do not have access to your payment card information.
+                    Purchases are processed through Dodo Payments. We receive your email address and purchase details, but we do not have access to your payment card information.
                   </p>
                 </section>
 
@@ -148,7 +148,7 @@ export default function PrivacyPage() {
                     <li>License data is stored securely in your Mac's Keychain</li>
                     <li>Hardware identifiers are hashed and cannot be reversed</li>
                     <li>All server communications use HTTPS encryption</li>
-                    <li>We use secure, reputable third-party services (Stripe for payments, Resend for email)</li>
+                    <li>We use secure, reputable third-party services (Dodo Payments for payments, Resend for email)</li>
                   </ul>
                 </section>
 
@@ -156,7 +156,7 @@ export default function PrivacyPage() {
                   <h2 className="text-2xl font-bold text-white mb-4">Third-Party Services</h2>
                   <p>We use the following third-party services:</p>
                   <ul className="list-disc pl-6 space-y-2">
-                    <li><strong className="text-white">Stripe</strong> - Payment processing (<a href="https://stripe.com/privacy" className="text-primary-300 hover:text-primary-200">Privacy Policy</a>)</li>
+                    <li><strong className="text-white">Dodo Payments</strong> - Payment processing (<a href="https://dodopayments.com/privacy-policy" className="text-primary-300 hover:text-primary-200">Privacy Policy</a>)</li>
                     <li><strong className="text-white">Resend</strong> - Email delivery (<a href="https://resend.com/privacy" className="text-primary-300 hover:text-primary-200">Privacy Policy</a>)</li>
                   </ul>
                 </section>

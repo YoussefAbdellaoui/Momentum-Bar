@@ -32,8 +32,8 @@ const limiter = rateLimit({
 });
 app.use('/api/', limiter);
 
-// Stripe webhooks need raw body - must be before express.json()
-app.use('/webhooks/stripe', express.raw({ type: 'application/json' }));
+// Dodo Payments webhooks need raw body - must be before express.json()
+app.use('/webhooks/dodo', express.raw({ type: 'application/json' }));
 
 // JSON parsing for other routes
 app.use(express.json());

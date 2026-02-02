@@ -1,26 +1,29 @@
 /**
  * Webhook Routes
  *
- * Handle Stripe payment webhooks
+ * Handle Dodo Payments webhooks
  */
 
 const express = require('express');
-const Stripe = require('stripe');
+const DodoPayments = require('dodopayments');
 const pool = require('../config/database');
 const { generateLicenseKey } = require('../utils/keygen');
 const { sendLicenseEmail } = require('../services/email');
 
 const router = express.Router();
 
-// Initialize Stripe
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+// Initialize Dodo Payments client
+const dodo = new DodoPayments({
+    bearerToken: process.env.DODO_PAYMENTS_API_KEY,
+    environment: process.env.DODO_PAYMENTS_ENVIRONMENT,
+    webhookKey: process.env.DODO_PAYMENTS_WEBHOOK_KEY
+});
 
-// Map Stripe price IDs to tiers
-const PRICE_TO_TIER = {
-    [process.env.STRIPE_PRICE_SOLO]: 'solo',
-    [process.env.STRIPE_PRICE_MULTIPLE]: 'multiple',
-    [process.env.STRIPE_PRICE_ENTERPRISE]: 'enterprise'
+// Map Dodo product IDs to tiers
+const PRODUCT_TO_TIER = {
+    [process.env.DODO_PRODUCT_SOLO]: 'solo',
+    [process.env.DODO_PRODUCT_MULTIPLE]: 'multiple',
+    [process.env.DODO_PRODUCT_ENTERPRISE]: 'enterprise'
 };
 
 const TIER_MAX_MACHINES = {
@@ -30,35 +33,45 @@ const TIER_MAX_MACHINES = {
 };
 
 // ============================================
-// POST /webhooks/stripe
-// Handle Stripe webhook events
+// POST /webhooks/dodo
+// Handle Dodo Payments webhook events
 // ============================================
-router.post('/stripe', async (req, res) => {
+const processedWebhookIds = new Set();
+
+router.post('/dodo', async (req, res) => {
     let event;
+    const webhookId = req.headers['webhook-id'];
 
     try {
         // Verify webhook signature
-        const sig = req.headers['stripe-signature'];
-        event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
+        event = await dodo.webhooks.unwrap(req.body.toString(), {
+            headers: {
+                'webhook-id': req.headers['webhook-id'],
+                'webhook-signature': req.headers['webhook-signature'],
+                'webhook-timestamp': req.headers['webhook-timestamp']
+            }
+        });
     } catch (err) {
         console.error('Webhook signature verification failed:', err.message);
-        return res.status(400).send(`Webhook Error: ${err.message}`);
+        return res.status(401).send(`Webhook Error: ${err.message}`);
+    }
+
+    if (webhookId) {
+        if (processedWebhookIds.has(webhookId)) {
+            return res.json({ received: true, duplicate: true });
+        }
+        processedWebhookIds.add(webhookId);
     }
 
     // Handle the event
     try {
         switch (event.type) {
-            case 'checkout.session.completed':
-                await handleCheckoutComplete(event.data.object);
+            case 'payment.succeeded':
+                await handlePaymentSucceeded(event);
                 break;
 
-            case 'payment_intent.succeeded':
-                // Can also handle direct payment intents if needed
-                console.log('Payment succeeded:', event.data.object.id);
-                break;
-
-            case 'payment_intent.payment_failed':
-                console.log('Payment failed:', event.data.object.id);
+            case 'payment.failed':
+                console.log('Payment failed:', event.data?.payment_id || event.data?.id);
                 break;
 
             default:
@@ -73,29 +86,37 @@ router.post('/stripe', async (req, res) => {
 });
 
 /**
- * Handle successful checkout session
+ * Handle successful payment
  */
-async function handleCheckoutComplete(session) {
-    console.log('Processing checkout session:', session.id);
+async function handlePaymentSucceeded(event) {
+    const payload = event?.data || event?.payload?.data || {};
+    const payment = payload?.object || payload;
+
+    console.log('Processing payment:', payment?.payment_id || payment?.id);
 
     // Get customer email
-    const email = session.customer_email || session.customer_details?.email;
+    const email = payment?.customer?.email || payment?.customer_email;
     if (!email) {
-        console.error('No email found in checkout session');
+        console.error('No email found in payment payload');
         return;
     }
 
-    // Get the line items to determine the tier
-    const lineItems = await stripe.checkout.sessions.listLineItems(session.id);
-    const priceId = lineItems.data[0]?.price?.id;
+    const metadata = payment?.metadata || payment?.object?.metadata || {};
+    const normalizeTier = (value) => {
+        if (typeof value !== 'string') return undefined;
+        const candidate = value.toLowerCase();
+        return TIER_MAX_MACHINES[candidate] ? candidate : undefined;
+    };
+    const tierFromMetadata = normalizeTier(metadata.tier);
 
-    const tier = PRICE_TO_TIER[priceId];
-    if (!tier) {
-        console.error('Unknown price ID:', priceId);
-        // Default to solo if unknown
-    }
+    const productId = payment?.product_id
+        || payment?.product?.product_id
+        || payment?.product?.id
+        || payment?.items?.[0]?.product_id
+        || payment?.product_cart?.[0]?.product_id;
+    const tierFromProduct = productId ? normalizeTier(PRODUCT_TO_TIER[productId]) : undefined;
 
-    const finalTier = tier || 'solo';
+    const finalTier = tierFromMetadata || tierFromProduct || 'solo';
     const maxMachines = TIER_MAX_MACHINES[finalTier];
 
     // Generate license key
@@ -104,9 +125,16 @@ async function handleCheckoutComplete(session) {
     // Store in database
     try {
         await pool.query(
-            `INSERT INTO licenses (license_key, tier, email, max_machines, stripe_session_id, stripe_customer_id)
+            `INSERT INTO licenses (license_key, tier, email, max_machines, dodo_payment_id, dodo_customer_id)
              VALUES ($1, $2, $3, $4, $5, $6)`,
-            [licenseKey, finalTier, email, maxMachines, session.id, session.customer]
+            [
+                licenseKey,
+                finalTier,
+                email,
+                maxMachines,
+                payment?.payment_id || payment?.id,
+                payment?.customer?.customer_id || payment?.customer?.id
+            ]
         );
 
         console.log(`License created: ${licenseKey} for ${email} (${finalTier})`);

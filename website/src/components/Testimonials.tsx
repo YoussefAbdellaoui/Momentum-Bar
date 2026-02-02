@@ -8,7 +8,7 @@ import { Star } from 'lucide-react'
 const testimonials = [
   {
     name: 'Sarah Chen',
-    role: 'Engineering Manager at Stripe',
+    role: 'Engineering Manager at Fintech Co.',
     avatar: 'SC',
     content: 'MomentumBar has become essential for managing my distributed team. The day/night indicators are a game-changer for scheduling.',
     rating: 5,

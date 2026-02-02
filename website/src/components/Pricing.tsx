@@ -6,6 +6,26 @@ import { useRef } from "react";
 import { Check, Sparkles, MessageCircle } from "lucide-react";
 import Link from "next/link";
 
+const DODO_CHECKOUT_BASE_URL =
+  process.env.NEXT_PUBLIC_DODO_CHECKOUT_BASE_URL ||
+  "https://checkout.dodopayments.com/buy";
+const DODO_CHECKOUT_REDIRECT_URL =
+  process.env.NEXT_PUBLIC_DODO_CHECKOUT_REDIRECT_URL;
+
+const buildDodoCheckoutUrl = (
+  productId: string | undefined,
+  fallbackPlan: string
+) => {
+  if (!productId || !DODO_CHECKOUT_REDIRECT_URL) {
+    return `/contact?plan=${fallbackPlan}`;
+  }
+
+  const baseUrl = `${DODO_CHECKOUT_BASE_URL}/${productId}`;
+  return `${baseUrl}?quantity=1&redirect_url=${encodeURIComponent(
+    DODO_CHECKOUT_REDIRECT_URL
+  )}`;
+};
+
 const plans = [
   {
     name: "Solo",
@@ -19,7 +39,10 @@ const plans = [
     ],
     popular: false,
     cta: "Get Solo",
-    href: "https://buy.stripe.com/test_aFa3cx7NPcz96BN6c35c400",
+    href: buildDodoCheckoutUrl(
+      process.env.NEXT_PUBLIC_DODO_PRODUCT_SOLO,
+      "solo"
+    ),
     isContact: false,
   },
   {
@@ -35,7 +58,10 @@ const plans = [
     ],
     popular: true,
     cta: "Get Multiple",
-    href: "https://buy.stripe.com/test_aFaaEZ4BDeHhbW757Z5c401",
+    href: buildDodoCheckoutUrl(
+      process.env.NEXT_PUBLIC_DODO_PRODUCT_MULTIPLE,
+      "multiple"
+    ),
     isContact: false,
   },
   {

@@ -24,8 +24,8 @@ CREATE TABLE IF NOT EXISTS licenses (
     email VARCHAR(255) NOT NULL,
     max_machines INTEGER NOT NULL DEFAULT 1,
     status VARCHAR(20) NOT NULL DEFAULT 'active' CHECK (status IN ('pending', 'active', 'revoked')),
-    stripe_session_id VARCHAR(255),
-    stripe_customer_id VARCHAR(255),
+    dodo_payment_id VARCHAR(255),
+    dodo_customer_id VARCHAR(255),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -44,7 +44,7 @@ CREATE TABLE IF NOT EXISTS activated_machines (
 -- Indexes for better query performance
 CREATE INDEX IF NOT EXISTS idx_licenses_email ON licenses(email);
 CREATE INDEX IF NOT EXISTS idx_licenses_status ON licenses(status);
-CREATE INDEX IF NOT EXISTS idx_licenses_stripe_session ON licenses(stripe_session_id);
+CREATE INDEX IF NOT EXISTS idx_licenses_dodo_payment ON licenses(dodo_payment_id);
 CREATE INDEX IF NOT EXISTS idx_machines_hardware ON activated_machines(hardware_id);
 CREATE INDEX IF NOT EXISTS idx_machines_license ON activated_machines(license_id);
 

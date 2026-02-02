@@ -199,7 +199,7 @@ After shortcuts are done, you still need to:
 
 ### Phase 2: Backend
 - [ ] Deploy backend to Railway
-- [ ] Configure Stripe
+- [ ] Configure Dodo Payments
 - [ ] Configure Resend email
 
 ### Phase 3: Build & Sign
