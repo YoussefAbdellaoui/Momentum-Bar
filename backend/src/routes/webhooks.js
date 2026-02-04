@@ -5,19 +5,14 @@
  */
 
 const express = require('express');
-const DodoPayments = require('dodopayments');
+const { Webhook } = require('standardwebhooks');
 const pool = require('../config/database');
 const { generateLicenseKey } = require('../utils/keygen');
 const { sendLicenseEmail } = require('../services/email');
 
 const router = express.Router();
 
-// Initialize Dodo Payments client
-const dodo = new DodoPayments({
-    bearerToken: process.env.DODO_PAYMENTS_API_KEY,
-    environment: process.env.DODO_PAYMENTS_ENVIRONMENT,
-    webhookKey: process.env.DODO_PAYMENTS_WEBHOOK_KEY
-});
+const webhookVerifier = new Webhook(process.env.DODO_PAYMENTS_WEBHOOK_KEY);
 
 // Map Dodo product IDs to tiers
 const PRODUCT_TO_TIER = {
@@ -44,12 +39,10 @@ router.post('/dodo', async (req, res) => {
 
     try {
         // Verify webhook signature
-        event = await dodo.webhooks.unwrap(req.body.toString(), {
-            headers: {
-                'webhook-id': req.headers['webhook-id'],
-                'webhook-signature': req.headers['webhook-signature'],
-                'webhook-timestamp': req.headers['webhook-timestamp']
-            }
+        event = webhookVerifier.verify(req.body.toString(), {
+            'webhook-id': req.headers['webhook-id'],
+            'webhook-signature': req.headers['webhook-signature'],
+            'webhook-timestamp': req.headers['webhook-timestamp']
         });
     } catch (err) {
         console.error('Webhook signature verification failed:', err.message);
@@ -89,7 +82,7 @@ router.post('/dodo', async (req, res) => {
  * Handle successful payment
  */
 async function handlePaymentSucceeded(event) {
-    const payload = event?.data || event?.payload?.data || {};
+    const payload = event?.data || {};
     const payment = payload?.object || payload;
 
     console.log('Processing payment:', payment?.payment_id || payment?.id);

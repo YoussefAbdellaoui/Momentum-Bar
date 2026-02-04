@@ -16,11 +16,15 @@ const buildDodoCheckoutUrl = (
   productId: string | undefined,
   fallbackPlan: string
 ) => {
-  if (!productId || !DODO_CHECKOUT_REDIRECT_URL) {
+  if (!productId) {
     return `/contact?plan=${fallbackPlan}`;
   }
 
   const baseUrl = `${DODO_CHECKOUT_BASE_URL}/${productId}`;
+  if (!DODO_CHECKOUT_REDIRECT_URL) {
+    return `${baseUrl}?quantity=1`;
+  }
+
   return `${baseUrl}?quantity=1&redirect_url=${encodeURIComponent(
     DODO_CHECKOUT_REDIRECT_URL
   )}`;
