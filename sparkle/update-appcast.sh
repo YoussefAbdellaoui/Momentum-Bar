@@ -28,7 +28,7 @@ SIGNATURE=$(echo "$SPARKLE_PRIVATE_KEY" | "$SPARKLE_BIN/sign_update" --ed-key-fi
 FILE_SIZE=$(stat -f%z "$ZIP_PATH")
 PUB_DATE=$(date -R)
 
-read -r -d '' ITEM <<ENTRY
+ITEM=$(cat <<ENTRY
     <item>
       <title>Version $SHORT_VERSION</title>
       <sparkle:releaseNotesLink>https://momentumbar.app/release-notes/$SHORT_VERSION</sparkle:releaseNotesLink>
@@ -43,20 +43,29 @@ read -r -d '' ITEM <<ENTRY
       />
     </item>
 ENTRY
+)
 
 if [[ ! -f "$APPCAST_PATH" ]]; then
   echo "Appcast not found at $APPCAST_PATH"
   exit 1
 fi
 
-TMP_FILE=$(mktemp)
-awk -v item="$ITEM" '
-  /<\/channel>/ {
-    print item
-  }
-  { print }
-' "$APPCAST_PATH" > "$TMP_FILE"
+export ITEM
+python3 - "$APPCAST_PATH" <<'PY'
+import os
+import sys
+from pathlib import Path
 
-mv "$TMP_FILE" "$APPCAST_PATH"
+appcast_path = Path(sys.argv[1])
+item = os.environ.get("ITEM", "")
+
+text = appcast_path.read_text()
+needle = "</channel>"
+if needle not in text:
+    raise SystemExit("Appcast missing </channel> tag")
+
+updated = text.replace(needle, f"{item}\n  {needle}", 1)
+appcast_path.write_text(updated)
+PY
 
 echo "Updated appcast: $APPCAST_PATH"

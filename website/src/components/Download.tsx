@@ -8,6 +8,7 @@ import { Apple, Download, Shield, Zap } from 'lucide-react'
 export default function DownloadSection() {
   const ref = useRef(null)
   const isInView = useInView(ref, { once: true })
+  const downloadUrl = process.env.NEXT_PUBLIC_DOWNLOAD_URL || '/download/MomentumBar.dmg'
 
   return (
     <section id="download" className="py-24 md:py-32 relative">
@@ -37,7 +38,7 @@ export default function DownloadSection() {
 
           {/* Download Button */}
           <motion.a
-            href="/download/MomentumBar.dmg"
+            href={downloadUrl}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             className="inline-flex items-center px-8 py-4 bg-white text-primary-700 font-semibold rounded-full hover:shadow-2xl hover:shadow-white/20 transition-shadow text-lg"
