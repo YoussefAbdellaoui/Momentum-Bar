@@ -1133,6 +1133,14 @@ struct ThemePreviewCard: View {
 
 // MARK: - About Tab
 struct AboutTab: View {
+    @StateObject private var updateService = UpdateService.shared
+
+    private var appVersion: String {
+        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0"
+        let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1"
+        return "\(version) (\(build))"
+    }
+
     var body: some View {
         ScrollView {
             VStack(spacing: 20) {
@@ -1146,7 +1154,7 @@ struct AboutTab: View {
                         .font(.title)
                         .fontWeight(.bold)
 
-                    Text("Version 1.0.0")
+                    Text("Version \(appVersion)")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -1156,6 +1164,29 @@ struct AboutTab: View {
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal)
+
+                Divider()
+                    .padding(.vertical, 8)
+
+                VStack(spacing: 12) {
+                    Button {
+                        updateService.checkForUpdates()
+                    } label: {
+                        HStack {
+                            Image(systemName: "arrow.triangle.2.circlepath")
+                            Text("Check for Updates")
+                            Spacer()
+                        }
+                        .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.borderedProminent)
+
+                    Toggle("Automatically check for updates", isOn: Binding(
+                        get: { updateService.automaticallyChecksForUpdates },
+                        set: { updateService.setAutomaticChecks($0) }
+                    ))
+                }
+                .padding(.horizontal)
 
                 Divider()
                     .padding(.vertical, 8)
@@ -1260,4 +1291,3 @@ struct AboutTab: View {
 #Preview {
     SettingsView()
 }
-

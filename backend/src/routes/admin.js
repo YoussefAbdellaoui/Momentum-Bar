@@ -32,6 +32,155 @@ const adminAuth = (req, res, next) => {
 router.use(adminAuth);
 
 // ============================================
+// GET /admin/announcements - List all announcements
+// ============================================
+router.get('/announcements', async (req, res) => {
+    try {
+        const { active, limit = 50 } = req.query;
+        const params = [];
+        const conditions = [];
+
+        if (active === 'true') {
+            conditions.push('is_active = true');
+        } else if (active === 'false') {
+            conditions.push('is_active = false');
+        }
+
+        let query = `
+            SELECT *
+            FROM announcements
+        `;
+
+        if (conditions.length > 0) {
+            query += ` WHERE ${conditions.join(' AND ')}`;
+        }
+
+        query += ' ORDER BY created_at DESC LIMIT $1';
+        params.push(Math.min(parseInt(limit, 10) || 50, 100));
+
+        const result = await pool.query(query, params);
+        res.json({ announcements: result.rows });
+    } catch (error) {
+        console.error('Error listing announcements:', error);
+        res.status(500).json({ error: 'Failed to list announcements' });
+    }
+});
+
+// ============================================
+// POST /admin/announcements - Create announcement
+// ============================================
+router.post('/announcements', async (req, res) => {
+    try {
+        const {
+            title,
+            body,
+            type = 'info',
+            linkUrl,
+            startsAt,
+            endsAt,
+            minAppVersion,
+            maxAppVersion,
+            isActive = true
+        } = req.body || {};
+
+        if (!title || !body) {
+            return res.status(400).json({ error: 'Title and body are required' });
+        }
+
+        const result = await pool.query(
+            `INSERT INTO announcements
+             (title, body, type, link_url, starts_at, ends_at, min_app_version, max_app_version, is_active)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+             RETURNING *`,
+            [title, body, type, linkUrl || null, startsAt || null, endsAt || null, minAppVersion || null, maxAppVersion || null, isActive]
+        );
+
+        res.status(201).json({ announcement: result.rows[0] });
+    } catch (error) {
+        console.error('Error creating announcement:', error);
+        res.status(500).json({ error: 'Failed to create announcement' });
+    }
+});
+
+// ============================================
+// PATCH /admin/announcements/:id - Update announcement
+// ============================================
+router.patch('/announcements/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const {
+            title,
+            body,
+            type,
+            linkUrl,
+            startsAt,
+            endsAt,
+            minAppVersion,
+            maxAppVersion,
+            isActive
+        } = req.body || {};
+
+        const fields = [];
+        const values = [];
+
+        const pushField = (column, value) => {
+            values.push(value);
+            fields.push(`${column} = $${values.length}`);
+        };
+
+        if (title !== undefined) pushField('title', title);
+        if (body !== undefined) pushField('body', body);
+        if (type !== undefined) pushField('type', type);
+        if (linkUrl !== undefined) pushField('link_url', linkUrl);
+        if (startsAt !== undefined) pushField('starts_at', startsAt);
+        if (endsAt !== undefined) pushField('ends_at', endsAt);
+        if (minAppVersion !== undefined) pushField('min_app_version', minAppVersion);
+        if (maxAppVersion !== undefined) pushField('max_app_version', maxAppVersion);
+        if (isActive !== undefined) pushField('is_active', isActive);
+
+        if (fields.length === 0) {
+            return res.status(400).json({ error: 'No fields provided' });
+        }
+
+        values.push(id);
+
+        const result = await pool.query(
+            `UPDATE announcements
+             SET ${fields.join(', ')}
+             WHERE id = $${values.length}
+             RETURNING *`,
+            values
+        );
+
+        if (!result.rows[0]) {
+            return res.status(404).json({ error: 'Announcement not found' });
+        }
+
+        res.json({ announcement: result.rows[0] });
+    } catch (error) {
+        console.error('Error updating announcement:', error);
+        res.status(500).json({ error: 'Failed to update announcement' });
+    }
+});
+
+// ============================================
+// DELETE /admin/announcements/:id - Delete announcement
+// ============================================
+router.delete('/announcements/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const result = await pool.query('DELETE FROM announcements WHERE id = $1 RETURNING id', [id]);
+        if (!result.rows[0]) {
+            return res.status(404).json({ error: 'Announcement not found' });
+        }
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Error deleting announcement:', error);
+        res.status(500).json({ error: 'Failed to delete announcement' });
+    }
+});
+
+// ============================================
 // GET /admin/licenses - List all licenses
 // ============================================
 router.get('/licenses', async (req, res) => {

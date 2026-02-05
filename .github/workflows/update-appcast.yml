@@ -1,0 +1,73 @@
+name: Update Sparkle Appcast
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release version (e.g. 1.2.3)"
+        required: true
+      build:
+        description: "Build number (CFBundleVersion)"
+        required: true
+      asset:
+        description: "Release asset filename (zip)"
+        required: true
+  release:
+    types: [published]
+
+jobs:
+  update-appcast:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download Sparkle tools
+        run: |
+          curl -L -o /tmp/Sparkle-2.7.3.tar.xz https://github.com/sparkle-project/Sparkle/releases/download/2.7.3/Sparkle-2.7.3.tar.xz
+          tar -xf /tmp/Sparkle-2.7.3.tar.xz -C /tmp
+          echo "SPARKLE_BIN=/tmp/bin" >> $GITHUB_ENV
+
+      - name: Determine version/build
+        id: meta
+        run: |
+          if [[ "${{ github.event_name }}" == "release" ]]; then
+            VERSION="${{ github.event.release.tag_name }}"
+            VERSION="${VERSION#v}"
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+          else
+            echo "version=${{ inputs.version }}" >> $GITHUB_OUTPUT
+          fi
+
+          if [[ "${{ github.event_name }}" == "release" ]]; then
+            echo "build=${{ github.event.release.id }}" >> $GITHUB_OUTPUT
+          else
+            echo "build=${{ inputs.build }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Download release asset
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ASSET_NAME="${{ inputs.asset }}"
+          RELEASE_TAG="${{ github.event.release.tag_name }}"
+          if [[ "${{ github.event_name }}" == "release" ]]; then
+            ASSET_NAME="MomentumBar-${{ steps.meta.outputs.version }}.zip"
+          fi
+          gh release download "$RELEASE_TAG" --pattern "$ASSET_NAME" --dir /tmp
+          echo "ASSET_NAME=$ASSET_NAME" >> $GITHUB_ENV
+
+      - name: Update appcast
+        env:
+          SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
+        run: |
+          DOWNLOAD_URL="https://momentumbar.app/downloads/$ASSET_NAME"
+          ./sparkle/update-appcast.sh "/tmp/$ASSET_NAME" "${{ steps.meta.outputs.version }}" "${{ steps.meta.outputs.build }}" "$DOWNLOAD_URL" "website/public/appcast.xml"
+
+      - name: Commit appcast
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add website/public/appcast.xml
+          git commit -m "chore: update appcast for ${{ steps.meta.outputs.version }}" || exit 0
+          git push

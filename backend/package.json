@@ -7,7 +7,8 @@
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
     "db:init": "node src/scripts/init-db.js",
-    "db:migrate:dodo": "node src/scripts/migrate-stripe-to-dodo.js"
+    "db:migrate:dodo": "node src/scripts/migrate-stripe-to-dodo.js",
+    "db:migrate:announcements": "node src/scripts/add-announcements-table.js"
   },
   "dependencies": {
     "dodopayments": "^1.52.5",

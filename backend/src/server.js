@@ -14,6 +14,7 @@ const rateLimit = require('express-rate-limit');
 const licenseRoutes = require('./routes/license');
 const webhookRoutes = require('./routes/webhooks');
 const adminRoutes = require('./routes/admin');
+const announcementRoutes = require('./routes/announcements');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -45,6 +46,7 @@ app.get('/health', (req, res) => {
 
 // API Routes
 app.use('/api/v1/license', licenseRoutes);
+app.use('/api/v1/announcements', announcementRoutes);
 app.use('/webhooks', webhookRoutes);
 app.use('/admin', adminRoutes);
 

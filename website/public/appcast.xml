@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" xmlns:dc="http://purl.org/dc/elements/1.1/">
+  <channel>
+    <title>MomentumBar Updates</title>
+    <link>https://momentumbar.app</link>
+    <description>Latest updates for MomentumBar</description>
+    <language>en</language>
+
+    <!-- Example item. Replace with real release entries signed by Sparkle. -->
+    <item>
+      <title>Version 1.0.0</title>
+      <sparkle:releaseNotesLink>https://momentumbar.app/release-notes/1.0.0</sparkle:releaseNotesLink>
+      <pubDate>Mon, 01 Jan 2026 10:00:00 +0000</pubDate>
+      <enclosure
+        url="https://momentumbar.app/downloads/MomentumBar-1.0.0.zip"
+        sparkle:version="1"
+        sparkle:shortVersionString="1.0.0"
+        length="0"
+        type="application/octet-stream"
+        sparkle:edSignature="REPLACE_WITH_SIGNATURE"
+      />
+    </item>
+  </channel>
+</rss>

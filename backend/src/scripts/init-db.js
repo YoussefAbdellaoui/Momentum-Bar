@@ -48,6 +48,26 @@ CREATE INDEX IF NOT EXISTS idx_licenses_dodo_payment ON licenses(dodo_payment_id
 CREATE INDEX IF NOT EXISTS idx_machines_hardware ON activated_machines(hardware_id);
 CREATE INDEX IF NOT EXISTS idx_machines_license ON activated_machines(license_id);
 
+-- Announcements table
+CREATE TABLE IF NOT EXISTS announcements (
+    id SERIAL PRIMARY KEY,
+    title TEXT NOT NULL,
+    body TEXT NOT NULL,
+    type VARCHAR(20) NOT NULL DEFAULT 'info' CHECK (type IN ('info', 'warning', 'critical')),
+    link_url TEXT,
+    starts_at TIMESTAMP WITH TIME ZONE,
+    ends_at TIMESTAMP WITH TIME ZONE,
+    min_app_version VARCHAR(20),
+    max_app_version VARCHAR(20),
+    is_active BOOLEAN NOT NULL DEFAULT true,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_announcements_active ON announcements(is_active);
+CREATE INDEX IF NOT EXISTS idx_announcements_starts_at ON announcements(starts_at);
+CREATE INDEX IF NOT EXISTS idx_announcements_ends_at ON announcements(ends_at);
+
 -- Updated_at trigger function
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
@@ -61,6 +81,13 @@ $$ language 'plpgsql';
 DROP TRIGGER IF EXISTS update_licenses_updated_at ON licenses;
 CREATE TRIGGER update_licenses_updated_at
     BEFORE UPDATE ON licenses
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+-- Apply trigger to announcements table
+DROP TRIGGER IF EXISTS update_announcements_updated_at ON announcements;
+CREATE TRIGGER update_announcements_updated_at
+    BEFORE UPDATE ON announcements
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 `;

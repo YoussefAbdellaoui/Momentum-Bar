@@ -18,6 +18,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var eventHandler: EventHandlerRef?
     private var cancellables = Set<AnyCancellable>()
     private var trialExpiredWindow: NSWindow?
+    private var announcementWindow: NSWindow?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         AppDelegate.shared = self
@@ -35,6 +36,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // Validate license at launch
         Task { @MainActor in
             await validateLicense()
+        }
+
+        // Check announcements after launch
+        Task { @MainActor in
+            await checkAnnouncements()
         }
 
         // Record meeting analytics on app activation
@@ -66,6 +72,52 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         if case .expired = licenseService.currentStatus {
             showTrialExpiredWindow()
         }
+    }
+
+    // MARK: - Announcements
+
+    @MainActor
+    private func checkAnnouncements() async {
+        if let announcement = await AnnouncementService.shared.checkForAnnouncementsIfNeeded() {
+            showAnnouncementWindow(announcement)
+        }
+    }
+
+    @MainActor
+    private func showAnnouncementWindow(_ announcement: Announcement) {
+        let contentView = AnnouncementModalView(
+            announcement: announcement,
+            onDismiss: { [weak self] in
+                AnnouncementService.shared.markAnnouncementSeen(announcement)
+                self?.closeAnnouncementWindow()
+            },
+            onPrimaryAction: announcement.linkURL == nil ? nil : { [weak self] in
+                if let url = announcement.linkURL {
+                    NSWorkspace.shared.open(url)
+                }
+                AnnouncementService.shared.markAnnouncementSeen(announcement)
+                self?.closeAnnouncementWindow()
+            }
+        )
+
+        let hostingController = NSHostingController(rootView: contentView)
+        let window = NSWindow(contentViewController: hostingController)
+        window.title = "Announcement"
+        window.styleMask = [.titled, .closable]
+        window.isReleasedWhenClosed = false
+        window.center()
+        window.level = .floating
+        window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+
+        announcementWindow = window
+        announcementWindow?.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
+    @MainActor
+    private func closeAnnouncementWindow() {
+        announcementWindow?.close()
+        announcementWindow = nil
     }
 
     func showTrialExpiredWindow() {
