@@ -5,32 +5,17 @@
     <link>https://momentumbar.app</link>
     <description>Latest updates for MomentumBar</description>
     <language>en</language>
-
-    <!-- Example item. Replace with real release entries signed by Sparkle. -->
     <item>
       <title>Version 1.0.0</title>
       <sparkle:releaseNotesLink>https://momentumbar.app/release-notes/1.0.0</sparkle:releaseNotesLink>
-      <pubDate>Mon, 01 Jan 2026 10:00:00 +0000</pubDate>
+      <pubDate>Thu, 05 Feb 2026 17:27:42 +0100</pubDate>
       <enclosure
         url="https://momentumbar.app/downloads/MomentumBar-1.0.0.zip"
         sparkle:version="1"
         sparkle:shortVersionString="1.0.0"
-        length="0"
+        length="8679905"
         type="application/octet-stream"
-        sparkle:edSignature="REPLACE_WITH_SIGNATURE"
-      />
-    </item>
-      <item>
-      <title>Version 1.0.0</title>
-      <sparkle:releaseNotesLink>https://momentumbar.app/release-notes/1.0.0</sparkle:releaseNotesLink>
-      <pubDate>Thu, 05 Feb 2026 13:37:01 +0100</pubDate>
-      <enclosure
-        url="https://momentumbar.app/downloads/MomentumBar-1.0.0.zip"
-        sparkle:version="1"
-        sparkle:shortVersionString="1.0.0"
-        length="8665342"
-        type="application/octet-stream"
-        sparkle:edSignature="NWy4V9CzuaJ+ttCXPCQ0oXP/zHSWZdUk+ou039/RxT7oXQixH1idlgY+WbPQLzEsACsV77xHEMzfd1H1tAtOAw=="
+        sparkle:edSignature="Q4ERh+1PSmjISXFe04FiFLpUiETQmKbpuF0+qgfee9qpQP5/0ruMG3L9DZIb9GPIhMXKQftQJiWHT7chX09eAA=="
       />
     </item>
   </channel>
