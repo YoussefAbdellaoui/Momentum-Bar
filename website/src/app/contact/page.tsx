@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { Send, ArrowLeft, Loader2, CheckCircle, Mail, Building, Users, MessageSquare } from 'lucide-react'
@@ -8,7 +8,7 @@ import Link from 'next/link'
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
 
-export default function ContactPage() {
+function ContactForm() {
   const searchParams = useSearchParams()
   const plan = searchParams.get('plan')
 
@@ -308,5 +308,25 @@ export default function ContactPage() {
 
       <Footer />
     </main>
+  )
+}
+
+export default function ContactPage() {
+  return (
+    <Suspense fallback={
+      <main className="min-h-screen">
+        <Navbar />
+        <section className="pt-32 pb-24 md:pt-40 md:pb-32">
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center">
+              <Loader2 className="w-8 h-8 animate-spin text-white mx-auto" />
+            </div>
+          </div>
+        </section>
+        <Footer />
+      </main>
+    }>
+      <ContactForm />
+    </Suspense>
   )
 }
