@@ -1,6 +1,16 @@
 import { NextResponse } from 'next/server'
 import { requireAdminSession } from '@/lib/adminAuth'
 
+const parseJsonResponse = async (response: Response) => {
+  const text = await response.text()
+  if (!text) return { data: null, rawText: '' }
+  try {
+    return { data: JSON.parse(text), rawText: text }
+  } catch {
+    return { data: null, rawText: text }
+  }
+}
+
 const getAdminApiUrl = () => {
   return process.env.ADMIN_API_URL || process.env.NEXT_PUBLIC_API_URL || ''
 }
@@ -13,7 +23,7 @@ const buildUrl = (path: string) => {
 }
 
 export async function GET(request: Request) {
-  const authResponse = requireAdminSession()
+  const authResponse = await requireAdminSession()
   if (authResponse) return authResponse
 
   const baseUrl = getAdminApiUrl()
@@ -25,19 +35,27 @@ export async function GET(request: Request) {
   const url = new URL(request.url)
   const limit = url.searchParams.get('limit')
 
-  const response = await fetch(buildUrl(`/admin/announcements${limit ? `?limit=${limit}` : ''}`), {
-    headers: {
-      'x-admin-key': adminKey,
-    },
-    cache: 'no-store',
-  })
+  let response: Response
+  try {
+    response = await fetch(buildUrl(`/admin/announcements${limit ? `?limit=${limit}` : ''}`), {
+      headers: {
+        'x-admin-key': adminKey,
+      },
+      cache: 'no-store',
+    })
+  } catch (error) {
+    return NextResponse.json({ error: 'Failed to reach admin API', detail: String(error) }, { status: 502 })
+  }
 
-  const data = await response.json()
-  return NextResponse.json(data, { status: response.status })
+  const { data, rawText } = await parseJsonResponse(response)
+  if (!data && rawText) {
+    return NextResponse.json({ error: 'Admin API returned non-JSON', body: rawText }, { status: 502 })
+  }
+  return NextResponse.json(data ?? {}, { status: response.status })
 }
 
 export async function POST(request: Request) {
-  const authResponse = requireAdminSession()
+  const authResponse = await requireAdminSession()
   if (authResponse) return authResponse
 
   const baseUrl = getAdminApiUrl()
@@ -48,21 +66,29 @@ export async function POST(request: Request) {
 
   const payload = await request.json().catch(() => null)
 
-  const response = await fetch(buildUrl('/admin/announcements'), {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-admin-key': adminKey,
-    },
-    body: JSON.stringify(payload || {}),
-  })
+  let response: Response
+  try {
+    response = await fetch(buildUrl('/admin/announcements'), {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-admin-key': adminKey,
+      },
+      body: JSON.stringify(payload || {}),
+    })
+  } catch (error) {
+    return NextResponse.json({ error: 'Failed to reach admin API', detail: String(error) }, { status: 502 })
+  }
 
-  const data = await response.json()
-  return NextResponse.json(data, { status: response.status })
+  const { data, rawText } = await parseJsonResponse(response)
+  if (!data && rawText) {
+    return NextResponse.json({ error: 'Admin API returned non-JSON', body: rawText }, { status: 502 })
+  }
+  return NextResponse.json(data ?? {}, { status: response.status })
 }
 
 export async function PATCH(request: Request) {
-  const authResponse = requireAdminSession()
+  const authResponse = await requireAdminSession()
   if (authResponse) return authResponse
 
   const baseUrl = getAdminApiUrl()
@@ -77,21 +103,29 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: 'Missing announcement id' }, { status: 400 })
   }
 
-  const response = await fetch(buildUrl(`/admin/announcements/${id}`), {
-    method: 'PATCH',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-admin-key': adminKey,
-    },
-    body: JSON.stringify(payload || {}),
-  })
+  let response: Response
+  try {
+    response = await fetch(buildUrl(`/admin/announcements/${id}`), {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-admin-key': adminKey,
+      },
+      body: JSON.stringify(payload || {}),
+    })
+  } catch (error) {
+    return NextResponse.json({ error: 'Failed to reach admin API', detail: String(error) }, { status: 502 })
+  }
 
-  const data = await response.json()
-  return NextResponse.json(data, { status: response.status })
+  const { data, rawText } = await parseJsonResponse(response)
+  if (!data && rawText) {
+    return NextResponse.json({ error: 'Admin API returned non-JSON', body: rawText }, { status: 502 })
+  }
+  return NextResponse.json(data ?? {}, { status: response.status })
 }
 
 export async function DELETE(request: Request) {
-  const authResponse = requireAdminSession()
+  const authResponse = await requireAdminSession()
   if (authResponse) return authResponse
 
   const baseUrl = getAdminApiUrl()
@@ -106,13 +140,21 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ error: 'Missing announcement id' }, { status: 400 })
   }
 
-  const response = await fetch(buildUrl(`/admin/announcements/${id}`), {
-    method: 'DELETE',
-    headers: {
-      'x-admin-key': adminKey,
-    },
-  })
+  let response: Response
+  try {
+    response = await fetch(buildUrl(`/admin/announcements/${id}`), {
+      method: 'DELETE',
+      headers: {
+        'x-admin-key': adminKey,
+      },
+    })
+  } catch (error) {
+    return NextResponse.json({ error: 'Failed to reach admin API', detail: String(error) }, { status: 502 })
+  }
 
-  const data = await response.json().catch(() => ({}))
-  return NextResponse.json(data, { status: response.status })
+  const { data, rawText } = await parseJsonResponse(response)
+  if (!data && rawText) {
+    return NextResponse.json({ error: 'Admin API returned non-JSON', body: rawText }, { status: 502 })
+  }
+  return NextResponse.json(data ?? {}, { status: response.status })
 }

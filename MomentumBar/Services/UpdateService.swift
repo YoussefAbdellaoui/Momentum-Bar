@@ -1,4 +1,5 @@
 import Foundation
+@preconcurrency import Combine
 import Sparkle
 
 @MainActor
@@ -23,3 +24,4 @@ final class UpdateService: ObservableObject {
         updaterController.checkForUpdates(nil)
     }
 }
+

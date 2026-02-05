@@ -156,7 +156,50 @@ final class NotificationService: NSObject, ObservableObject {
             options: []
         )
 
-        notificationCenter.setNotificationCategories([meetingCategory])
+        let announcementAction = UNNotificationAction(
+            identifier: "OPEN_ANNOUNCEMENT",
+            title: "View",
+            options: .foreground
+        )
+
+        let announcementCategory = UNNotificationCategory(
+            identifier: "ANNOUNCEMENT",
+            actions: [announcementAction],
+            intentIdentifiers: [],
+            options: []
+        )
+
+        notificationCenter.setNotificationCategories([meetingCategory, announcementCategory])
+    }
+
+    func showAnnouncementNotification(_ announcement: Announcement) async {
+        if !isAuthorized {
+            let granted = await requestAuthorization()
+            guard granted else { return }
+        }
+
+        let content = UNMutableNotificationContent()
+        content.title = announcement.title
+        content.body = announcement.body
+        content.sound = .default
+        content.categoryIdentifier = "ANNOUNCEMENT"
+
+        if let url = announcement.linkURL {
+            content.userInfo = ["announcementURL": url.absoluteString]
+        }
+
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
+        let request = UNNotificationRequest(
+            identifier: "announcement-\(announcement.id)",
+            content: content,
+            trigger: trigger
+        )
+
+        do {
+            try await notificationCenter.add(request)
+        } catch {
+            print("Failed to schedule announcement notification: \(error)")
+        }
     }
 }
 
@@ -210,9 +253,20 @@ extension NotificationService: UNUserNotificationCenterDelegate {
                 }
             }
 
+        case "OPEN_ANNOUNCEMENT", UNNotificationDefaultActionIdentifier:
+            if let urlString = userInfo["announcementURL"] as? String,
+               let url = URL(string: urlString) {
+                _ = await MainActor.run {
+                    NSWorkspace.shared.open(url)
+                }
+            } else {
+                _ = await MainActor.run {
+                    NSApp.activate(ignoringOtherApps: true)
+                }
+            }
+
         default:
             break
         }
     }
 }
-

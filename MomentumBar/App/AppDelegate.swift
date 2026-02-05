@@ -19,6 +19,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var cancellables = Set<AnyCancellable>()
     private var trialExpiredWindow: NSWindow?
     private var announcementWindow: NSWindow?
+    private var announcementTimer: Timer?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         AppDelegate.shared = self
@@ -40,8 +41,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         // Check announcements after launch
         Task { @MainActor in
-            await checkAnnouncements()
+            await checkAnnouncementsForModal()
         }
+
+        startAnnouncementPolling()
 
         // Record meeting analytics on app activation
         NotificationCenter.default.addObserver(
@@ -50,6 +53,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             queue: .main
         ) { [weak self] _ in
             self?.recordMeetingAnalytics()
+            Task { @MainActor in
+                await self?.checkAnnouncementsForModal()
+            }
         }
     }
 
@@ -77,10 +83,29 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Announcements
 
     @MainActor
-    private func checkAnnouncements() async {
-        if let announcement = await AnnouncementService.shared.checkForAnnouncementsIfNeeded() {
+    private func checkAnnouncementsForModal() async {
+        if announcementWindow != nil { return }
+        if let announcement = await AnnouncementService.shared.nextAnnouncementForModal(forceFetch: true) {
             showAnnouncementWindow(announcement)
         }
+    }
+
+    private func checkAnnouncementsForNotification() async {
+        if let announcement = await AnnouncementService.shared.nextAnnouncementForNotification(forceFetch: true) {
+            AnnouncementService.shared.markAnnouncementNotified(announcement)
+            await NotificationService.shared.showAnnouncementNotification(announcement)
+        }
+    }
+
+    private func startAnnouncementPolling() {
+        announcementTimer?.invalidate()
+        let timer = Timer.scheduledTimer(withTimeInterval: 15 * 60, repeats: true) { [weak self] _ in
+            Task { @MainActor in
+                await self?.checkAnnouncementsForNotification()
+            }
+        }
+        RunLoop.current.add(timer, forMode: .common)
+        announcementTimer = timer
     }
 
     @MainActor
@@ -155,6 +180,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationWillTerminate(_ notification: Notification) {
         unregisterAllHotKeys()
+        announcementTimer?.invalidate()
     }
 
     // MARK: - Dock Icon Management

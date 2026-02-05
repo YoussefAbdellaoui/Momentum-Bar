@@ -1,6 +1,7 @@
 import Foundation
 
 @MainActor
+@Observable
 final class AnnouncementService {
     static let shared = AnnouncementService()
 
@@ -8,9 +9,12 @@ final class AnnouncementService {
     private let session: URLSession
     private let decoder: JSONDecoder
     private let defaults = UserDefaults.standard
+    private(set) var announcements: [Announcement] = []
+    private var seenVersion: Int = 0
 
     private enum Keys {
         static let seenAnnouncementIds = "com.momentumbar.announcements.seen"
+        static let notifiedAnnouncementIds = "com.momentumbar.announcements.notified"
         static let lastFetch = "com.momentumbar.announcements.lastFetch"
         static let cachedAnnouncements = "com.momentumbar.announcements.cache"
     }
@@ -38,19 +42,60 @@ final class AnnouncementService {
             }
             throw DecodingError.dataCorruptedError(in: container, debugDescription: "Invalid date: \(value)")
         }
+
+        if let cached = loadCachedAnnouncements() {
+            announcements = cached
+        }
     }
 
-    func checkForAnnouncementsIfNeeded() async -> Announcement? {
-        let shouldFetch = shouldFetchAnnouncements()
-        let announcements = shouldFetch ? (await fetchAnnouncements()) : loadCachedAnnouncements()
-        guard let announcements else { return nil }
+    var unreadCount: Int {
+        _ = seenVersion
+        let seen = loadSeenIds()
+        return announcements.filter { !seen.contains($0.id) }.count
+    }
+
+    func refreshAnnouncements(force: Bool = false) async -> [Announcement] {
+        let shouldFetch = force || shouldFetchAnnouncements()
+        if shouldFetch, let fetched = await fetchAnnouncements() {
+            announcements = fetched
+            return fetched
+        }
+
+        if let cached = loadCachedAnnouncements() {
+            announcements = cached
+            return cached
+        }
+
+        return announcements
+    }
+
+    func nextAnnouncementForModal(forceFetch: Bool = false) async -> Announcement? {
+        let announcements = await refreshAnnouncements(force: forceFetch)
         return nextAnnouncementToShow(from: announcements)
+    }
+
+    func nextAnnouncementForNotification(forceFetch: Bool = false) async -> Announcement? {
+        let announcements = await refreshAnnouncements(force: forceFetch)
+        return nextAnnouncementToNotify(from: announcements)
     }
 
     func markAnnouncementSeen(_ announcement: Announcement) {
         var seen = loadSeenIds()
         seen.insert(announcement.id)
         defaults.set(Array(seen), forKey: Keys.seenAnnouncementIds)
+        seenVersion += 1
+    }
+
+    func markAnnouncementNotified(_ announcement: Announcement) {
+        var notified = loadNotifiedIds()
+        notified.insert(announcement.id)
+        defaults.set(Array(notified), forKey: Keys.notifiedAnnouncementIds)
+        seenVersion += 1
+    }
+
+    func isAnnouncementSeen(_ announcement: Announcement) -> Bool {
+        _ = seenVersion
+        return loadSeenIds().contains(announcement.id)
     }
 
     private func shouldFetchAnnouncements() -> Bool {
@@ -100,6 +145,11 @@ final class AnnouncementService {
         return Set(ids)
     }
 
+    private func loadNotifiedIds() -> Set<Int> {
+        let ids = defaults.array(forKey: Keys.notifiedAnnouncementIds) as? [Int] ?? []
+        return Set(ids)
+    }
+
     private func nextAnnouncementToShow(from announcements: [Announcement]) -> Announcement? {
         let currentVersion = SemanticVersion.current
         let now = Date()
@@ -107,6 +157,35 @@ final class AnnouncementService {
 
         return announcements.first { announcement in
             guard !seen.contains(announcement.id) else { return false }
+
+            if let startsAt = announcement.startsAt, startsAt > now { return false }
+            if let endsAt = announcement.endsAt, endsAt < now { return false }
+
+            if let minVersion = announcement.minAppVersion,
+               let parsedMin = SemanticVersion(minVersion),
+               currentVersion < parsedMin {
+                return false
+            }
+
+            if let maxVersion = announcement.maxAppVersion,
+               let parsedMax = SemanticVersion(maxVersion),
+               currentVersion > parsedMax {
+                return false
+            }
+
+            return true
+        }
+    }
+
+    private func nextAnnouncementToNotify(from announcements: [Announcement]) -> Announcement? {
+        let currentVersion = SemanticVersion.current
+        let now = Date()
+        let seen = loadSeenIds()
+        let notified = loadNotifiedIds()
+
+        return announcements.first { announcement in
+            guard !seen.contains(announcement.id) else { return false }
+            guard !notified.contains(announcement.id) else { return false }
 
             if let startsAt = announcement.startsAt, startsAt > now { return false }
             if let endsAt = announcement.endsAt, endsAt < now { return false }

@@ -277,25 +277,6 @@
 		};
 /* End PBXTargetDependency section */
 
-/* Begin XCSwiftPackageProductDependency section */
-		6229D9C17BC174AD9692A902 /* Sparkle */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 1C8D70D8114E7CED262EC96B /* XCRemoteSwiftPackageReference "Sparkle" */;
-			productName = Sparkle;
-		};
-/* End XCSwiftPackageProductDependency section */
-
-/* Begin XCRemoteSwiftPackageReference section */
-		1C8D70D8114E7CED262EC96B /* XCRemoteSwiftPackageReference "Sparkle" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/sparkle-project/Sparkle";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 2.6.4;
-			};
-		};
-/* End XCRemoteSwiftPackageReference section */
-
 /* Begin XCBuildConfiguration section */
 		876175C12F06A11F00BBF5E5 /* Debug */ = {
 			isa = XCBuildConfiguration;
@@ -437,9 +418,9 @@
 				INFOPLIST_KEY_NSCalendarsUsageDescription = "MomentumBar displays your upcoming meetings and allows one-click joining of video calls.";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				INFOPLIST_KEY_SUEnableAutomaticChecks = YES;
-				INFOPLIST_KEY_SUScheduledCheckInterval = 86400;
 				INFOPLIST_KEY_SUFeedURL = "https://momentumbar.app/appcast.xml";
 				INFOPLIST_KEY_SUPublicEDKey = "HOc0EwM+qybeSu5pQHtoge/Egl1Sl5YnQ5jd/AAu/as=";
+				INFOPLIST_KEY_SUScheduledCheckInterval = 86400;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -477,9 +458,9 @@
 				INFOPLIST_KEY_NSCalendarsUsageDescription = "MomentumBar displays your upcoming meetings and allows one-click joining of video calls.";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				INFOPLIST_KEY_SUEnableAutomaticChecks = YES;
-				INFOPLIST_KEY_SUScheduledCheckInterval = 86400;
 				INFOPLIST_KEY_SUFeedURL = "https://momentumbar.app/appcast.xml";
 				INFOPLIST_KEY_SUPublicEDKey = "HOc0EwM+qybeSu5pQHtoge/Egl1Sl5YnQ5jd/AAu/as=";
+				INFOPLIST_KEY_SUScheduledCheckInterval = 86400;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -617,6 +598,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		1C8D70D8114E7CED262EC96B /* XCRemoteSwiftPackageReference "Sparkle" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/sparkle-project/Sparkle";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.6.4;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		6229D9C17BC174AD9692A902 /* Sparkle */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 1C8D70D8114E7CED262EC96B /* XCRemoteSwiftPackageReference "Sparkle" */;
+			productName = Sparkle;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 8761759A2F06A11D00BBF5E5 /* Project object */;
 }

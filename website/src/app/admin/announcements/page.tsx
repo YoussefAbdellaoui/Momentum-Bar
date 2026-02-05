@@ -38,6 +38,24 @@ export default function AdminAnnouncementsPage() {
 
   const isFormValid = useMemo(() => form.title.trim().length > 0 && form.body.trim().length > 0, [form])
 
+  const readErrorMessage = async (res: Response, fallback: string) => {
+    try {
+      const data = await res.json()
+      if (data?.error) return data.error
+      if (data?.message) return data.message
+      if (typeof data === 'string') return data
+    } catch {
+      // ignore JSON parse errors
+    }
+    try {
+      const text = await res.text()
+      if (text) return text
+    } catch {
+      // ignore body read errors
+    }
+    return fallback
+  }
+
   const fetchAnnouncements = async () => {
     setLoading(true)
     setError(null)
@@ -48,7 +66,7 @@ export default function AdminAnnouncementsPage() {
         setLoggedIn(false)
         return
       }
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       setAnnouncements(data.announcements || [])
       setLoggedIn(true)
     } catch (err) {
@@ -74,7 +92,7 @@ export default function AdminAnnouncementsPage() {
       })
 
       if (!res.ok) {
-        setError('Invalid password')
+        setError(await readErrorMessage(res, 'Invalid password'))
         return
       }
 
@@ -113,7 +131,7 @@ export default function AdminAnnouncementsPage() {
       })
 
       if (!res.ok) {
-        setError('Failed to create announcement')
+        setError(await readErrorMessage(res, 'Failed to create announcement'))
         return
       }
 
@@ -121,6 +139,44 @@ export default function AdminAnnouncementsPage() {
       fetchAnnouncements()
     } catch (err) {
       setError('Failed to create announcement')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleTriggerNow = async () => {
+    if (!isFormValid) return
+    setLoading(true)
+    setError(null)
+
+    try {
+      const payload = {
+        title: form.title,
+        body: form.body,
+        type: form.type,
+        linkUrl: form.linkUrl || undefined,
+        startsAt: new Date().toISOString(),
+        endsAt: form.endsAt || undefined,
+        minAppVersion: form.minAppVersion || undefined,
+        maxAppVersion: form.maxAppVersion || undefined,
+        isActive: true,
+      }
+
+      const res = await fetch('/api/admin/announcements', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+
+      if (!res.ok) {
+        setError(await readErrorMessage(res, 'Failed to trigger announcement'))
+        return
+      }
+
+      setForm(defaultForm)
+      fetchAnnouncements()
+    } catch (err) {
+      setError('Failed to trigger announcement')
     } finally {
       setLoading(false)
     }
@@ -138,13 +194,41 @@ export default function AdminAnnouncementsPage() {
       })
 
       if (!res.ok) {
-        setError('Failed to update announcement')
+        setError(await readErrorMessage(res, 'Failed to update announcement'))
         return
       }
 
       fetchAnnouncements()
     } catch (err) {
       setError('Failed to update announcement')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleTriggerExisting = async (announcement: Announcement) => {
+    setLoading(true)
+    setError(null)
+
+    try {
+      const res = await fetch('/api/admin/announcements', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: announcement.id,
+          startsAt: new Date().toISOString(),
+          isActive: true,
+        }),
+      })
+
+      if (!res.ok) {
+        setError(await readErrorMessage(res, 'Failed to trigger announcement'))
+        return
+      }
+
+      fetchAnnouncements()
+    } catch (err) {
+      setError('Failed to trigger announcement')
     } finally {
       setLoading(false)
     }
@@ -161,7 +245,7 @@ export default function AdminAnnouncementsPage() {
       })
 
       if (!res.ok) {
-        setError('Failed to delete announcement')
+        setError(await readErrorMessage(res, 'Failed to delete announcement'))
         return
       }
 
@@ -283,13 +367,22 @@ export default function AdminAnnouncementsPage() {
 
               {error && <p className="mt-3 text-sm text-red-300">{error}</p>}
 
-              <button
-                onClick={handleCreate}
-                disabled={!isFormValid || loading}
-                className="mt-4 rounded-lg bg-white text-slate-900 px-4 py-2 font-semibold disabled:opacity-50"
-              >
-                Create announcement
-              </button>
+              <div className="mt-4 flex flex-wrap gap-3">
+                <button
+                  onClick={handleCreate}
+                  disabled={!isFormValid || loading}
+                  className="rounded-lg bg-white text-slate-900 px-4 py-2 font-semibold disabled:opacity-50"
+                >
+                  Schedule announcement
+                </button>
+                <button
+                  onClick={handleTriggerNow}
+                  disabled={!isFormValid || loading}
+                  className="rounded-lg border border-white/30 px-4 py-2 font-semibold disabled:opacity-50"
+                >
+                  Trigger now
+                </button>
+              </div>
             </section>
 
             <section className="bg-white/5 border border-white/10 rounded-2xl p-6">
@@ -309,6 +402,12 @@ export default function AdminAnnouncementsPage() {
                         <p className="text-sm text-white/70 mt-1">{announcement.body}</p>
                       </div>
                       <div className="flex gap-2">
+                        <button
+                          onClick={() => handleTriggerExisting(announcement)}
+                          className="rounded-lg border border-white/20 px-3 py-1 text-sm"
+                        >
+                          Trigger now
+                        </button>
                         <button
                           onClick={() => handleToggleActive(announcement)}
                           className="rounded-lg border border-white/20 px-3 py-1 text-sm"

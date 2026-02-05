@@ -100,6 +100,9 @@ struct PopoverContentView: View {
             FooterView()
         }
         .frame(width: 420, height: 520)
+        .task {
+            await AnnouncementService.shared.refreshAnnouncements()
+        }
     }
 }
 
@@ -164,9 +167,32 @@ struct CalendarTabView: View {
 // MARK: - Footer View
 struct FooterView: View {
     @State private var isPinned: Bool = false
+    @State private var showAnnouncements = false
+    @State private var announcementService = AnnouncementService.shared
 
     var body: some View {
         HStack {
+            Button {
+                showAnnouncements = true
+            } label: {
+                ZStack(alignment: .topTrailing) {
+                    Image(systemName: "bell")
+                        .font(.body)
+
+                    if announcementService.unreadCount > 0 {
+                        Circle()
+                            .fill(Color.red)
+                            .frame(width: 6, height: 6)
+                            .offset(x: 4, y: -4)
+                    }
+                }
+            }
+            .buttonStyle(.plain)
+            .help("Announcements")
+            .sheet(isPresented: $showAnnouncements) {
+                AnnouncementListView()
+            }
+
             SettingsLink {
                 Image(systemName: "gearshape")
                     .font(.body)

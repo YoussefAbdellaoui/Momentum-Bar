@@ -30,10 +30,11 @@ export const createSessionCookie = () => {
   }
 }
 
-export const isSessionValid = () => {
+export const isSessionValid = async () => {
   const secret = getSecret()
   if (!secret) return false
-  const cookie = cookies().get(COOKIE_NAME)
+  const cookieStore = await cookies()
+  const cookie = cookieStore.get(COOKIE_NAME)
   if (!cookie?.value) return false
 
   const [timestampRaw, signature] = cookie.value.split('.')
@@ -51,8 +52,8 @@ export const isSessionValid = () => {
   return true
 }
 
-export const requireAdminSession = () => {
-  if (!isSessionValid()) {
+export const requireAdminSession = async () => {
+  if (!(await isSessionValid())) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
   return null
