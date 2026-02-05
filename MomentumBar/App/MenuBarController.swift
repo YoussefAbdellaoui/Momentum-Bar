@@ -152,6 +152,7 @@ class MenuBarController {
     // MARK: - Menu Bar Display
     private func updateMenuBarDisplay() {
         guard let button = statusItem.button else { return }
+        statusItem.isVisible = true
 
         let preferences = StorageService.shared.loadPreferences()
 

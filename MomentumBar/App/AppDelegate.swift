@@ -39,9 +39,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             await validateLicense()
         }
 
-        // Check announcements after launch
+        // Check announcements after launch (only after onboarding)
         Task { @MainActor in
-            await checkAnnouncementsForModal()
+            await checkAnnouncementsForNotification()
         }
 
         startAnnouncementPolling()
@@ -54,7 +54,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         ) { [weak self] _ in
             self?.recordMeetingAnalytics()
             Task { @MainActor in
-                await self?.checkAnnouncementsForModal()
+                await self?.checkAnnouncementsForNotification()
             }
         }
     }
@@ -83,14 +83,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Announcements
 
     @MainActor
-    private func checkAnnouncementsForModal() async {
-        if announcementWindow != nil { return }
-        if let announcement = await AnnouncementService.shared.nextAnnouncementForModal(forceFetch: true) {
-            showAnnouncementWindow(announcement)
-        }
-    }
-
     private func checkAnnouncementsForNotification() async {
+        guard OnboardingService.shared.hasCompletedOnboarding else { return }
         if let announcement = await AnnouncementService.shared.nextAnnouncementForNotification(forceFetch: true) {
             AnnouncementService.shared.markAnnouncementNotified(announcement)
             await NotificationService.shared.showAnnouncementNotification(announcement)
@@ -108,42 +102,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         announcementTimer = timer
     }
 
-    @MainActor
-    private func showAnnouncementWindow(_ announcement: Announcement) {
-        let contentView = AnnouncementModalView(
-            announcement: announcement,
-            onDismiss: { [weak self] in
-                AnnouncementService.shared.markAnnouncementSeen(announcement)
-                self?.closeAnnouncementWindow()
-            },
-            onPrimaryAction: announcement.linkURL == nil ? nil : { [weak self] in
-                if let url = announcement.linkURL {
-                    NSWorkspace.shared.open(url)
-                }
-                AnnouncementService.shared.markAnnouncementSeen(announcement)
-                self?.closeAnnouncementWindow()
-            }
-        )
-
-        let hostingController = NSHostingController(rootView: contentView)
-        let window = NSWindow(contentViewController: hostingController)
-        window.title = "Announcement"
-        window.styleMask = [.titled, .closable]
-        window.isReleasedWhenClosed = false
-        window.center()
-        window.level = .floating
-        window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
-
-        announcementWindow = window
-        announcementWindow?.makeKeyAndOrderFront(nil)
-        NSApp.activate(ignoringOtherApps: true)
-    }
-
-    @MainActor
-    private func closeAnnouncementWindow() {
-        announcementWindow?.close()
-        announcementWindow = nil
-    }
+    // Announcement modal removed in favor of system notifications + list view.
 
     func showTrialExpiredWindow() {
         // Create window if it doesn't exist

@@ -335,14 +335,12 @@ struct CalendarSettingsTab: View {
                 if calendarService.authorizationStatus != .fullAccess {
                     Button("Grant Calendar Access") {
                         Task {
-                            await calendarService.requestAccess()
+                            await calendarService.requestAccessOrOpenSettings()
                         }
                     }
 
                     Button("Open System Settings") {
-                        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Calendars") {
-                            NSWorkspace.shared.open(url)
-                        }
+                        calendarService.openCalendarSystemSettings()
                     }
                     .buttonStyle(.link)
                 }

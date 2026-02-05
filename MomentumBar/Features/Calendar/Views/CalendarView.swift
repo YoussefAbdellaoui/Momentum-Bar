@@ -138,7 +138,7 @@ struct CalendarView: View {
 
             Button("Grant Access") {
                 Task {
-                    await calendarService.requestAccess()
+                    await calendarService.requestAccessOrOpenSettings()
                 }
             }
             .buttonStyle(.borderedProminent)
@@ -169,9 +169,7 @@ struct CalendarView: View {
                 .padding(.horizontal)
 
             Button("Open System Settings") {
-                if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Calendars") {
-                    NSWorkspace.shared.open(url)
-                }
+                calendarService.openCalendarSystemSettings()
             }
             .buttonStyle(.borderedProminent)
 

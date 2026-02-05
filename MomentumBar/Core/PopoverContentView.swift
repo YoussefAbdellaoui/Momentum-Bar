@@ -101,7 +101,7 @@ struct PopoverContentView: View {
         }
         .frame(width: 420, height: 520)
         .task {
-            await AnnouncementService.shared.refreshAnnouncements()
+            _ = await AnnouncementService.shared.refreshAnnouncements()
         }
     }
 }

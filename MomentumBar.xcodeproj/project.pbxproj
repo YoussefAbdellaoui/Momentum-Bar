@@ -416,6 +416,8 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_LSUIElement = YES;
 				INFOPLIST_KEY_NSCalendarsUsageDescription = "MomentumBar displays your upcoming meetings and allows one-click joining of video calls.";
+				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "MomentumBar needs full calendar access to show upcoming meetings and help you manage events.";
+				INFOPLIST_KEY_NSCalendarsWriteOnlyUsageDescription = "MomentumBar needs calendar write access to create or edit events.";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				INFOPLIST_KEY_SUEnableAutomaticChecks = YES;
 				INFOPLIST_KEY_SUFeedURL = "https://momentumbar.app/appcast.xml";
@@ -456,6 +458,8 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_LSUIElement = YES;
 				INFOPLIST_KEY_NSCalendarsUsageDescription = "MomentumBar displays your upcoming meetings and allows one-click joining of video calls.";
+				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "MomentumBar needs full calendar access to show upcoming meetings and help you manage events.";
+				INFOPLIST_KEY_NSCalendarsWriteOnlyUsageDescription = "MomentumBar needs calendar write access to create or edit events.";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				INFOPLIST_KEY_SUEnableAutomaticChecks = YES;
 				INFOPLIST_KEY_SUFeedURL = "https://momentumbar.app/appcast.xml";

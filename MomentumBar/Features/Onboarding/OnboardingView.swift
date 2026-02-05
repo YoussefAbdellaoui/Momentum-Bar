@@ -145,7 +145,7 @@ struct OnboardingView: View {
             if calendarService.authorizationStatus != .fullAccess {
                 Button(step.actionTitle ?? "Setup") {
                     Task {
-                        await calendarService.requestAccess()
+                        await calendarService.requestAccessOrOpenSettings()
                     }
                 }
                 .buttonStyle(.bordered)
@@ -274,4 +274,3 @@ private class WindowDelegateHandler: NSObject, NSWindowDelegate {
 #Preview {
     OnboardingView()
 }
-

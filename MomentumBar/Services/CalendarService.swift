@@ -8,6 +8,7 @@
 import Foundation
 import EventKit
 import Combine
+import AppKit
 
 @MainActor
 final class CalendarService: ObservableObject {
@@ -125,6 +126,18 @@ final class CalendarService: ObservableObject {
         authorizationStatus = EKEventStore.authorizationStatus(for: .event)
     }
 
+    func requestAccessOrOpenSettings() async {
+        updateAuthorizationStatus()
+        switch authorizationStatus {
+        case .notDetermined:
+            _ = await requestAccess()
+        case .restricted, .denied:
+            openCalendarSystemSettings()
+        default:
+            break
+        }
+    }
+
     func requestAccess() async -> Bool {
         do {
             let granted = try await eventStore.requestFullAccessToEvents()
@@ -138,6 +151,12 @@ final class CalendarService: ObservableObject {
         } catch {
             print("Calendar access request failed: \(error)")
             return false
+        }
+    }
+
+    func openCalendarSystemSettings() {
+        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Calendars") {
+            NSWorkspace.shared.open(url)
         }
     }
 
