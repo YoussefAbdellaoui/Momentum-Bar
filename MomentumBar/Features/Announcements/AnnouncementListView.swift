@@ -11,6 +11,7 @@ struct AnnouncementListView: View {
     @State private var service = AnnouncementService.shared
     @State private var isLoading = false
     @State private var errorMessage: String?
+    let onClose: (() -> Void)?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -42,6 +43,16 @@ struct AnnouncementListView: View {
             if isLoading {
                 ProgressView()
                     .controlSize(.small)
+            }
+
+            if let onClose {
+                Button {
+                    onClose()
+                } label: {
+                    Image(systemName: "xmark")
+                }
+                .buttonStyle(.plain)
+                .help("Close")
             }
 
             Button {

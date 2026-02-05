@@ -7,9 +7,12 @@
 
 import SwiftUI
 import Combine
+import AppKit
 
 struct PopoverContentView: View {
     @State private var selectedTab = 0
+    private let defaultPopoverSize = NSSize(width: 420, height: 520)
+    private let settingsPopoverSize = NSSize(width: 900, height: 620)
 
     private func tabIcon(for index: Int) -> String {
         switch index {
@@ -31,6 +34,8 @@ struct PopoverContentView: View {
         case 3: return "Calendar"
         case 4: return "Pomodoro"
         case 5: return "Analytics"
+        case 6: return "Announcements"
+        case 7: return "Settings"
         default: return ""
         }
     }
@@ -42,28 +47,30 @@ struct PopoverContentView: View {
 
             Divider()
 
-            // Tab selector
-            HStack(spacing: 4) {
-                ForEach(0..<6, id: \.self) { index in
-                    Button {
-                        selectedTab = index
-                    } label: {
-                        Image(systemName: tabIcon(for: index))
-                            .font(.system(size: 14))
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 6)
-                            .background(
-                                RoundedRectangle(cornerRadius: 6)
-                                    .fill(selectedTab == index ? Color.accentColor.opacity(0.15) : Color.clear)
-                            )
-                            .foregroundStyle(selectedTab == index ? .primary : .secondary)
+            // Tab selector (hide when in Settings to avoid confusion)
+            if selectedTab != 7 {
+                HStack(spacing: 4) {
+                    ForEach(0..<6, id: \.self) { index in
+                        Button {
+                            selectedTab = index
+                        } label: {
+                            Image(systemName: tabIcon(for: index))
+                                .font(.system(size: 14))
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 6)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 6)
+                                        .fill(selectedTab == index ? Color.accentColor.opacity(0.15) : Color.clear)
+                                )
+                                .foregroundStyle(selectedTab == index ? .primary : .secondary)
+                        }
+                        .buttonStyle(.plain)
+                        .help(tabLabel(for: index))
                     }
-                    .buttonStyle(.plain)
-                    .help(tabLabel(for: index))
                 }
+                .padding(.horizontal)
+                .padding(.vertical, 8)
             }
-            .padding(.horizontal)
-            .padding(.vertical, 8)
 
             // Content based on selected tab
             Group {
@@ -88,6 +95,10 @@ struct PopoverContentView: View {
                     PomodoroView()
                 case 5:
                     MeetingAnalyticsView()
+                case 6:
+                    AnnouncementListView(onClose: { selectedTab = 0 })
+                case 7:
+                    SettingsPanelView(onClose: { selectedTab = 0 })
                 default:
                     EmptyView()
                 }
@@ -97,12 +108,26 @@ struct PopoverContentView: View {
             Divider()
 
             // Footer with settings
-            FooterView()
+            FooterView(selectedTab: $selectedTab)
         }
-        .frame(width: 420, height: 520)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .task {
             _ = await AnnouncementService.shared.refreshAnnouncements()
         }
+        .onAppear {
+            requestPopoverResize(for: selectedTab)
+        }
+        .onChange(of: selectedTab) { _, newValue in
+            requestPopoverResize(for: newValue)
+        }
+    }
+
+    private func requestPopoverResize(for tab: Int) {
+        let size = (tab == 7) ? settingsPopoverSize : defaultPopoverSize
+        NotificationCenter.default.post(
+            name: .popoverResizeRequested,
+            object: NSValue(size: size)
+        )
     }
 }
 
@@ -166,14 +191,14 @@ struct CalendarTabView: View {
 
 // MARK: - Footer View
 struct FooterView: View {
+    @Binding var selectedTab: Int
     @State private var isPinned: Bool = false
-    @State private var showAnnouncements = false
     @State private var announcementService = AnnouncementService.shared
 
     var body: some View {
         HStack {
             Button {
-                showAnnouncements = true
+                selectedTab = 6
             } label: {
                 ZStack(alignment: .topTrailing) {
                     Image(systemName: "bell")
@@ -189,11 +214,10 @@ struct FooterView: View {
             }
             .buttonStyle(.plain)
             .help("Announcements")
-            .sheet(isPresented: $showAnnouncements) {
-                AnnouncementListView()
-            }
 
-            SettingsLink {
+            Button {
+                selectedTab = 7
+            } label: {
                 Image(systemName: "gearshape")
                     .font(.body)
             }

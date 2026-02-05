@@ -406,23 +406,15 @@
 				CODE_SIGN_ENTITLEMENTS = MomentumBar/MomentumBar.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_TEAM = 3CAJN6L683;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_CALENDARS = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_LSUIElement = YES;
-				INFOPLIST_KEY_NSCalendarsUsageDescription = "MomentumBar displays your upcoming meetings and allows one-click joining of video calls.";
-				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "MomentumBar needs full calendar access to show upcoming meetings and help you manage events.";
-				INFOPLIST_KEY_NSCalendarsWriteOnlyUsageDescription = "MomentumBar needs calendar write access to create or edit events.";
-				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				INFOPLIST_KEY_SUEnableAutomaticChecks = YES;
-				INFOPLIST_KEY_SUFeedURL = "https://momentumbar.app/appcast.xml";
-				INFOPLIST_KEY_SUPublicEDKey = "HOc0EwM+qybeSu5pQHtoge/Egl1Sl5YnQ5jd/AAu/as=";
-				INFOPLIST_KEY_SUScheduledCheckInterval = 86400;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = MomentumBar/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -448,23 +440,15 @@
 				CODE_SIGN_ENTITLEMENTS = MomentumBar/MomentumBar.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_TEAM = 3CAJN6L683;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_CALENDARS = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_LSUIElement = YES;
-				INFOPLIST_KEY_NSCalendarsUsageDescription = "MomentumBar displays your upcoming meetings and allows one-click joining of video calls.";
-				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "MomentumBar needs full calendar access to show upcoming meetings and help you manage events.";
-				INFOPLIST_KEY_NSCalendarsWriteOnlyUsageDescription = "MomentumBar needs calendar write access to create or edit events.";
-				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				INFOPLIST_KEY_SUEnableAutomaticChecks = YES;
-				INFOPLIST_KEY_SUFeedURL = "https://momentumbar.app/appcast.xml";
-				INFOPLIST_KEY_SUPublicEDKey = "HOc0EwM+qybeSu5pQHtoge/Egl1Sl5YnQ5jd/AAu/as=";
-				INFOPLIST_KEY_SUScheduledCheckInterval = 86400;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = MomentumBar/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -487,7 +471,7 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_TEAM = 3CAJN6L683;
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
@@ -508,7 +492,7 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_TEAM = 3CAJN6L683;
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
@@ -528,7 +512,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_TEAM = 3CAJN6L683;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0.0;
@@ -547,7 +531,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_TEAM = 3CAJN6L683;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0.0;

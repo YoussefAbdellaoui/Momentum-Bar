@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleDevelopmentRegion</key>
+    <string>$(DEVELOPMENT_LANGUAGE)</string>
+    <key>CFBundleExecutable</key>
+    <string>$(EXECUTABLE_NAME)</string>
+    <key>CFBundleIdentifier</key>
+    <string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+    <key>CFBundleInfoDictionaryVersion</key>
+    <string>6.0</string>
+    <key>CFBundleName</key>
+    <string>$(PRODUCT_NAME)</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleShortVersionString</key>
+    <string>$(MARKETING_VERSION)</string>
+    <key>CFBundleVersion</key>
+    <string>$(CURRENT_PROJECT_VERSION)</string>
+
+    <key>LSUIElement</key>
+    <true/>
+
+    <key>NSCalendarsFullAccessUsageDescription</key>
+    <string>MomentumBar needs full calendar access to show upcoming meetings and help you manage events.</string>
+    <key>NSCalendarsUsageDescription</key>
+    <string>MomentumBar displays your upcoming meetings and allows one-click joining of video calls.</string>
+    <key>NSCalendarsWriteOnlyUsageDescription</key>
+    <string>MomentumBar needs calendar write access to create or edit events.</string>
+
+    <key>SUFeedURL</key>
+    <string>https://momentumbar.app/appcast.xml</string>
+    <key>SUPublicEDKey</key>
+    <string>HOc0EwM+qybeSu5pQHtoge/Egl1Sl5YnQ5jd/AAu/as=</string>
+    <key>SUEnableAutomaticChecks</key>
+    <true/>
+    <key>SUScheduledCheckInterval</key>
+    <integer>86400</integer>
+
+    <key>NSHumanReadableCopyright</key>
+    <string></string>
+</dict>
+</plist>

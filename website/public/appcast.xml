@@ -5,30 +5,30 @@
     <link>https://momentumbar.app</link>
     <description>Latest updates for MomentumBar</description>
     <language>en</language>
+        <item>
+      <title>Version 1.0.0</title>
+      <sparkle:releaseNotesLink>https://momentumbar.app/release-notes/1.0.0</sparkle:releaseNotesLink>
+      <pubDate>Thu, 05 Feb 2026 18:19:28 +0100</pubDate>
+      <enclosure
+        url="https://momentumbar.app/downloads/MomentumBar-1.0.0.zip"
+        sparkle:version="1"
+        sparkle:shortVersionString="1.0.0"
+        length="8679889"
+        type="application/octet-stream"
+        sparkle:edSignature="erOi3HxRi7OGzzaGMOpYKnG4PcCpq+KQPyMqbVWTX1xU1EEjlWsxnKjxlonbgj0aYQHnuX9D/KB3ZTLTFamBAg=="
+      />
+    </item>
     <item>
       <title>Version 1.0.0</title>
       <sparkle:releaseNotesLink>https://momentumbar.app/release-notes/1.0.0</sparkle:releaseNotesLink>
-      <pubDate>Thu, 05 Feb 2026 17:27:42 +0100</pubDate>
+      <pubDate>Thu, 05 Feb 2026 19:11:41 +0100</pubDate>
       <enclosure
         url="https://momentumbar.app/downloads/MomentumBar-1.0.0.zip"
-        sparkle:version="1"
+        sparkle:version="2"
         sparkle:shortVersionString="1.0.0"
-        length="8679905"
+        length="8672640"
         type="application/octet-stream"
-        sparkle:edSignature="Q4ERh+1PSmjISXFe04FiFLpUiETQmKbpuF0+qgfee9qpQP5/0ruMG3L9DZIb9GPIhMXKQftQJiWHT7chX09eAA=="
-      />
-    </item>
-      <item>
-      <title>Version 1.0.0</title>
-      <sparkle:releaseNotesLink>https://momentumbar.app/release-notes/1.0.0</sparkle:releaseNotesLink>
-      <pubDate>Thu, 05 Feb 2026 18:00:23 +0100</pubDate>
-      <enclosure
-        url="https://momentumbar.app/downloads/MomentumBar-1.0.0.zip"
-        sparkle:version="1"
-        sparkle:shortVersionString="1.0.0"
-        length="8679895"
-        type="application/octet-stream"
-        sparkle:edSignature="BC461ecpiIE6ymiFNY09revSga4+cq+fhGQT+vy17dnroCiJUdWo520yNbT/0Yzhft03xCwKfP4TJZRAOdOQCA=="
+        sparkle:edSignature="IAhy9LskNYc/eTnhMkNE6vj5GHFdnZPh0y6CUFOJFC2BbwluoyNPPyTt7DgpDgTt+8/CnkD+4qI2z0m3OI8LBw=="
       />
     </item>
   </channel>

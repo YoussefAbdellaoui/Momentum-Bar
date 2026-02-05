@@ -71,7 +71,7 @@ struct SettingsView: View {
                 }
                 .tag(Tabs.about)
         }
-        .frame(width: 500, height: 500)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 
@@ -139,6 +139,7 @@ struct GeneralSettingsTab: View {
                     .foregroundStyle(.secondary)
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .formStyle(.grouped)
         .padding()
     }
@@ -260,6 +261,7 @@ struct TimeZoneSettingsTab: View {
                     .foregroundStyle(.secondary)
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .formStyle(.grouped)
         .padding()
         .confirmationDialog(
@@ -453,6 +455,7 @@ struct CalendarSettingsTab: View {
                 }
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .formStyle(.grouped)
         .padding()
         .onAppear {
@@ -635,6 +638,7 @@ struct FocusSettingsTab: View {
                 }
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .formStyle(.grouped)
         .padding()
         .sheet(isPresented: $showSetupSheet) {
@@ -960,6 +964,7 @@ struct DisplaySettingsTab: View {
                 }
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .formStyle(.grouped)
         .padding()
     }
@@ -1057,6 +1062,7 @@ struct ThemeSettingsTab: View {
                 }
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .formStyle(.grouped)
         .padding()
     }

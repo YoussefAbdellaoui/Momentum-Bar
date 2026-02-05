@@ -65,6 +65,13 @@ class MenuBarController {
         let hostingController = NSHostingController(rootView: PopoverContentView())
         hostingController.view.translatesAutoresizingMaskIntoConstraints = false
         popover.contentViewController = hostingController
+
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handlePopoverResize(_:)),
+            name: .popoverResizeRequested,
+            object: nil
+        )
     }
 
     private func configureStatusButton() {
@@ -338,6 +345,14 @@ class MenuBarController {
         eventMonitor?.stop()
     }
 
+    @objc private func handlePopoverResize(_ notification: Notification) {
+        guard let size = notification.object as? NSValue else { return }
+        let newSize = size.sizeValue
+        if popover.contentSize != newSize {
+            popover.contentSize = newSize
+        }
+    }
+
     // MARK: - Pin Control
 
     func togglePin() {
@@ -370,4 +385,5 @@ class MenuBarController {
 // MARK: - Notification Names
 extension Notification.Name {
     static let popoverPinStateChanged = Notification.Name("popoverPinStateChanged")
+    static let popoverResizeRequested = Notification.Name("popoverResizeRequested")
 }
