@@ -8,7 +8,7 @@ import { Apple, Download, Shield, Zap } from 'lucide-react'
 export default function DownloadSection() {
   const ref = useRef(null)
   const isInView = useInView(ref, { once: true })
-  const downloadUrl = process.env.NEXT_PUBLIC_DOWNLOAD_URL || '/download/MomentumBar.dmg'
+  const downloadUrl = process.env.NEXT_PUBLIC_DOWNLOAD_URL || '/downloads/MomentumBar-1.0.1.dmg'
 
   return (
     <section id="download" className="py-24 md:py-32 relative">
