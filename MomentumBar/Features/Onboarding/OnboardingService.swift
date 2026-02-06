@@ -107,7 +107,6 @@ enum OnboardingStep: Int, CaseIterable {
     case timeZones
     case calendar
     case pomodoro
-    case focusMode
     case getStarted
 
     var title: String {
@@ -116,7 +115,6 @@ enum OnboardingStep: Int, CaseIterable {
         case .timeZones: return "World Time Zones"
         case .calendar: return "Calendar Integration"
         case .pomodoro: return "Pomodoro Timer"
-        case .focusMode: return "Focus Mode"
         case .getStarted: return "You're All Set!"
         }
     }
@@ -131,8 +129,6 @@ enum OnboardingStep: Int, CaseIterable {
             return "Never miss a meeting again"
         case .pomodoro:
             return "Stay focused with timed work sessions"
-        case .focusMode:
-            return "Minimize distractions automatically"
         case .getStarted:
             return "Start your productive journey"
         }
@@ -148,8 +144,6 @@ enum OnboardingStep: Int, CaseIterable {
             return "Connect your calendar to see upcoming meetings, get reminders before they start, and join with one click."
         case .pomodoro:
             return "Use the Pomodoro technique to work in focused 25-minute sessions with short breaks. Track your daily focus time."
-        case .focusMode:
-            return "Automatically enable macOS Focus modes (Do Not Disturb, Work, Personal, Sleep) during Pomodoro sessions or meetings."
         case .getStarted:
             return "Click the menu bar icon anytime to access all features. Customize everything in Settings."
         }
@@ -161,7 +155,6 @@ enum OnboardingStep: Int, CaseIterable {
         case .timeZones: return "globe"
         case .calendar: return "calendar"
         case .pomodoro: return "timer"
-        case .focusMode: return "moon.fill"
         case .getStarted: return "checkmark.circle.fill"
         }
     }
@@ -172,14 +165,13 @@ enum OnboardingStep: Int, CaseIterable {
         case .timeZones: return "#34C759"
         case .calendar: return "#FF9500"
         case .pomodoro: return "#FF3B30"
-        case .focusMode: return "#AF52DE"
         case .getStarted: return "#34C759"
         }
     }
 
     var hasAction: Bool {
         switch self {
-        case .calendar, .focusMode: return true
+        case .calendar: return true
         default: return false
         }
     }
@@ -187,7 +179,6 @@ enum OnboardingStep: Int, CaseIterable {
     var actionTitle: String? {
         switch self {
         case .calendar: return "Grant Calendar Access"
-        case .focusMode: return "Setup Focus Mode"
         default: return nil
         }
     }

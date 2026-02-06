@@ -141,8 +141,6 @@ final class PomodoroService {
             todaySessions.append(session)
             saveTodaySessions()
 
-            // Disable Focus Mode when stopping work session
-            FocusModeService.shared.onPomodoroWorkEnded()
         }
 
         timer?.invalidate()
@@ -174,8 +172,6 @@ final class PomodoroService {
         currentSessionStart = Date()
         startTimer()
 
-        // Enable Focus Mode if configured
-        FocusModeService.shared.onPomodoroWorkStarted()
     }
 
     private func startShortBreak() {
@@ -183,8 +179,6 @@ final class PomodoroService {
         timeRemaining = TimeInterval(settings.shortBreakDuration * 60)
         currentSessionStart = Date()
 
-        // Disable Focus Mode when entering break
-        FocusModeService.shared.onPomodoroWorkEnded()
 
         if settings.autoStartBreaks {
             startTimer()
@@ -198,8 +192,6 @@ final class PomodoroService {
         timeRemaining = TimeInterval(settings.longBreakDuration * 60)
         currentSessionStart = Date()
 
-        // Disable Focus Mode when entering break
-        FocusModeService.shared.onPomodoroWorkEnded()
 
         if settings.autoStartBreaks {
             startTimer()

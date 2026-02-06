@@ -261,7 +261,7 @@ struct CalendarView: View {
                 .font(.title3)
                 .fontWeight(.medium)
 
-            Text("You have no events in the next 24 hours")
+            Text("You have no events in the next 7 days")
                 .font(.caption)
                 .foregroundStyle(.secondary)
 

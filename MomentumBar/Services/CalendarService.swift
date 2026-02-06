@@ -80,6 +80,10 @@ final class CalendarService: ObservableObject {
         updateAuthorizationStatus()
         setupNotifications()
         startAuthorizationMonitoring()
+        if canReadEvents {
+            loadCalendars()
+            fetchUpcomingEvents()
+        }
     }
 
     deinit {
@@ -151,6 +155,10 @@ final class CalendarService: ObservableObject {
     // MARK: - Authorization
     func updateAuthorizationStatus() {
         authorizationStatus = EKEventStore.authorizationStatus(for: .event)
+        if canReadEvents {
+            loadCalendars()
+            fetchUpcomingEvents()
+        }
     }
 
     func requestAccessOrOpenSettings() async {
@@ -194,7 +202,7 @@ final class CalendarService: ObservableObject {
     }
 
     // MARK: - Events
-    func fetchUpcomingEvents(hours: Int = 24, calendarIDs: Set<String>? = nil) {
+    func fetchUpcomingEvents(hours: Int = 168, calendarIDs: Set<String>? = nil) {
         guard canReadEvents else { return }
 
         isLoading = true

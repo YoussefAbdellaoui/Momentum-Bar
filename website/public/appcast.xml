@@ -5,7 +5,7 @@
     <link>https://momentumbar.app</link>
     <description>Latest updates for MomentumBar</description>
     <language>en</language>
-                        <item>
+                            <item>
       <title>Version 1.0.0</title>
       <sparkle:releaseNotesLink>https://momentumbar.app/release-notes/1.0.0</sparkle:releaseNotesLink>
       <pubDate>Thu, 05 Feb 2026 18:19:28 +0100</pubDate>
@@ -60,14 +60,14 @@
     <item>
       <title>Version 1.0.3</title>
       <sparkle:releaseNotesLink>https://momentumbar.app/release-notes/1.0.3</sparkle:releaseNotesLink>
-      <pubDate>Fri, 06 Feb 2026 13:59:14 +0100</pubDate>
+      <pubDate>Fri, 06 Feb 2026 14:15:55 +0100</pubDate>
       <enclosure
         url="https://momentumbar.app/downloads/MomentumBar-1.0.3.zip"
         sparkle:version="5"
         sparkle:shortVersionString="1.0.3"
-        length="8627802"
+        length="8507421"
         type="application/octet-stream"
-        sparkle:edSignature="7vVEcpJSwpbL+CuZTrLUh9d8uilWRO1/yeOuokL7jzufWjTk4PwGEYzg8+D/NZM+gpxNliQE/mkWZbUbYsj6CQ=="
+        sparkle:edSignature="3ZVJM0sKGkFMav7XOL7WQw/e8xA//eeIIdWCJ+nmbmbfl1dFTyn1ZEd8Q69J5xA/HwDcVLzMQHN2dNxspPTWCQ=="
       />
     </item>
   </channel>

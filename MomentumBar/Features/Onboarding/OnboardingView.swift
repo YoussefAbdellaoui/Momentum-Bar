@@ -11,10 +11,6 @@ import EventKit
 struct OnboardingView: View {
     @State private var onboardingService = OnboardingService.shared
     @State private var calendarService = CalendarService.shared
-    @State private var focusService = FocusModeService.shared
-    @State private var shortcutInstaller = ShortcutInstaller.shared
-    @State private var showFocusSetup = false
-    @State private var isInstallingShortcuts = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -88,9 +84,6 @@ struct OnboardingView: View {
         }
         .frame(width: 480, height: 400)
         .background(Color(NSColor.windowBackgroundColor))
-        .sheet(isPresented: $showFocusSetup) {
-            FocusModeSetupSheet(isPresented: $showFocusSetup, mode: nil)
-        }
     }
 
     @ViewBuilder
@@ -132,8 +125,6 @@ struct OnboardingView: View {
             // Status indicator for action steps
             if step == .calendar {
                 calendarStatusIndicator
-            } else if step == .focusMode {
-                focusStatusIndicator
             }
         }
     }
@@ -149,28 +140,6 @@ struct OnboardingView: View {
                     }
                 }
                 .buttonStyle(.bordered)
-            }
-
-        case .focusMode:
-            if !shortcutInstaller.hasInstalledShortcuts {
-                Button(isInstallingShortcuts ? "Installing..." : "Auto-Install Focus Shortcuts") {
-                    Task {
-                        isInstallingShortcuts = true
-                        // Install shortcuts for all detected Focus modes
-                        _ = await shortcutInstaller.installShortcutsForDetectedModes(focusService.availableFocusModes)
-                        isInstallingShortcuts = false
-                        focusService.completeSetup()
-                    }
-                }
-                .buttonStyle(.bordered)
-                .disabled(isInstallingShortcuts)
-
-                if !focusService.availableFocusModes.isEmpty {
-                    Text("Installing shortcuts for: \(focusService.availableFocusModes.map { $0.displayName }.joined(separator: ", "))")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                        .padding(.top, 4)
-                }
             }
 
         default:
@@ -190,23 +159,6 @@ struct OnboardingView: View {
         }
     }
 
-    @ViewBuilder
-    private var focusStatusIndicator: some View {
-        HStack(spacing: 8) {
-            Image(systemName: shortcutInstaller.hasInstalledShortcuts ? "checkmark.circle.fill" : "circle")
-                .foregroundStyle(shortcutInstaller.hasInstalledShortcuts ? .green : .secondary)
-
-            if isInstallingShortcuts {
-                Text("Installing shortcuts...")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            } else {
-                Text(shortcutInstaller.hasInstalledShortcuts ? "Focus shortcuts installed" : "Focus shortcuts not installed")
-                    .font(.caption)
-                    .foregroundStyle(shortcutInstaller.hasInstalledShortcuts ? .primary : .secondary)
-            }
-        }
-    }
 }
 
 // MARK: - Onboarding Window Controller
