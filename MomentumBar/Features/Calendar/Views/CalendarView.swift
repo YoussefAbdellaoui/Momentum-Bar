@@ -25,7 +25,7 @@ struct CalendarView: View {
             case .restricted, .denied:
                 deniedAccessView
 
-            case .fullAccess, .writeOnly:
+            case .fullAccess:
                 if calendarService.upcomingEvents.isEmpty && !calendarService.isLoading {
                     noEventsView
                 } else {
@@ -34,6 +34,10 @@ struct CalendarView: View {
 
                 // Bottom toolbar
                 calendarToolbar
+            case .writeOnly:
+                writeOnlyView
+            case .authorized:
+                legacyAccessView
 
             @unknown default:
                 requestAccessView
@@ -41,7 +45,7 @@ struct CalendarView: View {
         }
         .onAppear {
             calendarService.updateAuthorizationStatus()
-            if calendarService.authorizationStatus == .fullAccess {
+            if calendarService.authorizationStatus == .fullAccess || (!isMacOS14OrNewer && calendarService.authorizationStatus == .authorized) {
                 calendarService.refresh()
             }
         }
@@ -60,6 +64,71 @@ struct CalendarView: View {
                 set: { if !$0 { editingEvent = nil } }
             ))
         }
+    }
+
+    private var legacyAccessView: some View {
+        VStack(spacing: 16) {
+            Spacer()
+
+            Image(systemName: "calendar")
+                .font(.system(size: 48))
+                .foregroundStyle(.secondary)
+
+            Text("Calendar Access Granted")
+                .font(.title3)
+                .fontWeight(.medium)
+
+            Text("MomentumBar can read your calendar. If you don't see events, try Refresh.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal)
+
+            Button("Refresh") {
+                calendarService.refresh()
+            }
+            .buttonStyle(.bordered)
+
+            Spacer()
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding()
+    }
+
+    private var isMacOS14OrNewer: Bool {
+        if #available(macOS 14.0, *) {
+            return true
+        }
+        return false
+    }
+
+    private var writeOnlyView: some View {
+        VStack(spacing: 16) {
+            Spacer()
+
+            Image(systemName: "calendar.badge.exclamationmark")
+                .font(.system(size: 48))
+                .foregroundStyle(.orange)
+
+            Text("Calendar Access Limited")
+                .font(.title3)
+                .fontWeight(.medium)
+
+            Text("MomentumBar has write-only access and cannot display your events. Allow full access in System Settings.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal)
+
+            Button("Open System Settings") {
+                calendarService.openCalendarSystemSettings()
+            }
+            .buttonStyle(.borderedProminent)
+
+            Spacer()
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding()
     }
 
     // MARK: - Delete Event

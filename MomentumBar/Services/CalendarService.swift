@@ -24,6 +24,26 @@ final class CalendarService: ObservableObject {
     @Published var overlaps: [MeetingOverlap] = []
     @Published var bufferWarnings: [String: BufferWarning] = [:]
 
+    private var canReadEvents: Bool {
+        if authorizationStatus == .fullAccess {
+            return true
+        }
+        if #available(macOS 14.0, *) {
+            return false
+        }
+        return authorizationStatus == .authorized
+    }
+
+    private var canWriteEvents: Bool {
+        if authorizationStatus == .fullAccess || authorizationStatus == .writeOnly {
+            return true
+        }
+        if #available(macOS 14.0, *) {
+            return false
+        }
+        return authorizationStatus == .authorized
+    }
+
     var hasOverlaps: Bool {
         !overlaps.isEmpty
     }
@@ -96,26 +116,33 @@ final class CalendarService: ObservableObject {
     private func checkAuthorizationChange() {
         let currentStatus = EKEventStore.authorizationStatus(for: .event)
         if currentStatus != authorizationStatus {
-            let wasNotAuthorized = authorizationStatus != .fullAccess
+            let wasNotAuthorized = !canReadEvents
             authorizationStatus = currentStatus
 
             // If we just got authorized, load calendars and events
-            if wasNotAuthorized && currentStatus == .fullAccess {
+            if wasNotAuthorized && (currentStatus == .fullAccess || (!isMacOS14OrNewer && currentStatus == .authorized)) {
                 loadCalendars()
                 fetchUpcomingEvents()
             }
         }
 
         // Stop polling once we have full access
-        if currentStatus == .fullAccess {
+        if currentStatus == .fullAccess || (!isMacOS14OrNewer && currentStatus == .authorized) {
             authCheckTimer?.invalidate()
             authCheckTimer = nil
         }
     }
 
+    private var isMacOS14OrNewer: Bool {
+        if #available(macOS 14.0, *) {
+            return true
+        }
+        return false
+    }
+
     private func handleCalendarStoreChanged() {
         // Refresh data when calendar store changes
-        if authorizationStatus == .fullAccess {
+        if canReadEvents {
             loadCalendars()
             fetchUpcomingEvents()
         }
@@ -162,13 +189,13 @@ final class CalendarService: ObservableObject {
 
     // MARK: - Calendars
     func loadCalendars() {
-        guard authorizationStatus == .fullAccess else { return }
+        guard canReadEvents else { return }
         availableCalendars = eventStore.calendars(for: .event)
     }
 
     // MARK: - Events
     func fetchUpcomingEvents(hours: Int = 24, calendarIDs: Set<String>? = nil) {
-        guard authorizationStatus == .fullAccess else { return }
+        guard canReadEvents else { return }
 
         isLoading = true
 
@@ -209,7 +236,7 @@ final class CalendarService: ObservableObject {
     }
 
     func fetchRecentEvents(hours: Int = 2) -> [CalendarEvent] {
-        guard authorizationStatus == .fullAccess else { return [] }
+        guard canReadEvents else { return [] }
 
         let endDate = Date()
         let startDate = Calendar.current.date(byAdding: .hour, value: -hours, to: endDate) ?? endDate
@@ -239,7 +266,7 @@ final class CalendarService: ObservableObject {
 
     // MARK: - Refresh
     func refresh() {
-        guard authorizationStatus == .fullAccess else { return }
+        guard canReadEvents else { return }
         loadCalendars()
         fetchUpcomingEvents()
     }
@@ -262,7 +289,7 @@ final class CalendarService: ObservableObject {
         location: String? = nil,
         url: URL? = nil
     ) throws -> CalendarEvent {
-        guard authorizationStatus == .fullAccess else {
+        guard canWriteEvents else {
             throw CalendarError.notAuthorized
         }
 
@@ -293,7 +320,7 @@ final class CalendarService: ObservableObject {
         location: String? = nil,
         url: URL? = nil
     ) throws {
-        guard authorizationStatus == .fullAccess else {
+        guard canWriteEvents else {
             throw CalendarError.notAuthorized
         }
 
@@ -315,7 +342,7 @@ final class CalendarService: ObservableObject {
 
     /// Delete a calendar event
     func deleteEvent(_ event: CalendarEvent) throws {
-        guard authorizationStatus == .fullAccess else {
+        guard canWriteEvents else {
             throw CalendarError.notAuthorized
         }
 
@@ -390,7 +417,7 @@ final class CalendarService: ObservableObject {
 
     /// Import events from ICS file
     func importFromICS(url: URL, to calendar: EKCalendar) throws -> Int {
-        guard authorizationStatus == .fullAccess else {
+        guard canWriteEvents else {
             throw CalendarError.notAuthorized
         }
 
