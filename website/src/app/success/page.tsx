@@ -1,10 +1,10 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 
-export default function SuccessPage() {
+function SuccessContent() {
   const searchParams = useSearchParams()
   const paymentId = searchParams.get('payment_id')
   const [loading, setLoading] = useState(true)
@@ -180,5 +180,20 @@ export default function SuccessPage() {
         </div>
       </div>
     </main>
+  )
+}
+export default function SuccessPage() {
+  return (
+    <Suspense fallback={
+      <main className="min-h-screen flex items-center justify-center p-4">
+        <div className="glass rounded-3xl p-12 max-w-2xl w-full text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-white mx-auto mb-6"></div>
+          <h2 className="text-2xl font-bold text-white mb-2">Loading...</h2>
+          <p className="text-white/70">Please wait</p>
+        </div>
+      </main>
+    }>
+      <SuccessContent />
+    </Suspense>
   )
 }
