@@ -288,6 +288,57 @@ router.get('/info/:key', async (req, res) => {
     }
 });
 
+// ============================================
+// GET /api/v1/license/payment/:paymentId
+// Validate payment and get license info
+// ============================================
+router.get('/payment/:paymentId', async (req, res) => {
+    try {
+        const { paymentId } = req.params;
+
+        if (!paymentId) {
+            return res.status(400).json({
+                success: false,
+                error: 'Payment ID is required'
+            });
+        }
+
+        // Find license by payment ID
+        const result = await pool.query(
+            'SELECT license_key, tier, email, created_at FROM licenses WHERE dodo_payment_id = $1',
+            [paymentId]
+        );
+
+        if (!result.rows[0]) {
+            return res.status(404).json({
+                success: false,
+                error: 'Payment not found. Your license may still be processing.'
+            });
+        }
+
+        const license = result.rows[0];
+
+        res.json({
+            success: true,
+            payment: {
+                id: paymentId,
+                status: 'succeeded',
+                email: license.email,
+                tier: license.tier,
+                licenseKey: license.license_key,
+                purchaseDate: license.created_at
+            }
+        });
+
+    } catch (error) {
+        console.error('Payment validation error:', error);
+        res.status(500).json({ 
+            success: false,
+            error: 'Failed to validate payment' 
+        });
+    }
+});
+
 // Helper function to get activated machine count
 async function getActivatedCount(licenseId) {
     const result = await pool.query(
