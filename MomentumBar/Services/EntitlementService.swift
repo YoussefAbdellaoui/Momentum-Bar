@@ -41,7 +41,13 @@ final class EntitlementService {
     }
 
     var hasKeychainAccess: Bool {
-        hasEntitlement("keychain-access-groups")
+        if hasEntitlement("keychain-access-groups") {
+            return true
+        }
+
+        // If no explicit keychain access group entitlement is set, macOS still
+        // allows app-scoped keychain items. Treat this as available.
+        return true
     }
 
     var hasAppGroupAccess: Bool {
