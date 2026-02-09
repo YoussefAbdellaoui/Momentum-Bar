@@ -83,5 +83,18 @@
         sparkle:edSignature="eg0C9zz9VlNlgtSOYT/wdnyTSdJnMItRg496uX2DeXZL0EEfGL6J1oGoJMNVXUdRFQ8EN3XmTnzdzeXJckt4BA=="
       />
     </item>
+      <item>
+      <title>Version 1.0.4</title>
+      <sparkle:releaseNotesLink>https://momentumbar.app/release-notes/1.0.4</sparkle:releaseNotesLink>
+      <pubDate>Mon, 09 Feb 2026 16:09:11 +0100</pubDate>
+      <enclosure
+        url="https://momentumbar.app/downloads/MomentumBar-1.0.4.zip"
+        sparkle:version="6"
+        sparkle:shortVersionString="1.0.4"
+        length="8555259"
+        type="application/octet-stream"
+        sparkle:edSignature="Fb8bl/fqdWNOi6SSmUPXfs4ykyhJIbJWzuLF7C/mTSm2ydjTgEtjTb7R8IaYkSXvfv22znIrWXE3CNRsMWhVDw=="
+      />
+    </item>
   </channel>
 </rss>
