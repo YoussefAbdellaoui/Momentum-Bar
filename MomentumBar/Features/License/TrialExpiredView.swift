@@ -81,7 +81,7 @@ struct TrialExpiredView: View {
 
                 // Footer
                 HStack {
-                    Link("Purchase License", destination: URL(string: "https://momentumbar.app/purchase")!)
+                    Link("Purchase License", destination: URL(string: "https://www.momentumbar.app/#pricing")!)
                         .buttonStyle(.borderedProminent)
 
                     Spacer()
@@ -223,7 +223,7 @@ struct TrialWarningBanner: View {
 
             Spacer()
 
-            Link("Purchase Now", destination: URL(string: "https://momentumbar.app/purchase")!)
+            Link("Purchase Now", destination: URL(string: "https://www.momentumbar.app/#pricing")!)
                 .font(.caption)
                 .buttonStyle(.borderedProminent)
                 .controlSize(.small)

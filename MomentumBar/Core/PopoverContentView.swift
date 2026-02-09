@@ -112,7 +112,9 @@ struct PopoverContentView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .task {
-            _ = await AnnouncementService.shared.refreshAnnouncements()
+            if OnboardingService.shared.hasCompletedOnboarding {
+                _ = await AnnouncementService.shared.refreshAnnouncements()
+            }
         }
         .onAppear {
             requestPopoverResize(for: selectedTab)
@@ -205,10 +207,15 @@ struct FooterView: View {
                         .font(.body)
 
                     if announcementService.unreadCount > 0 {
-                        Circle()
-                            .fill(Color.red)
-                            .frame(width: 6, height: 6)
-                            .offset(x: 4, y: -4)
+                        ZStack {
+                            Circle()
+                                .fill(Color.red)
+                            Text("\(min(announcementService.unreadCount, 9))")
+                                .font(.system(size: 8, weight: .bold))
+                                .foregroundStyle(.white)
+                        }
+                        .frame(width: 14, height: 14)
+                        .offset(x: 6, y: -6)
                     }
                 }
             }

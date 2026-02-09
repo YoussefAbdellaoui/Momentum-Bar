@@ -23,6 +23,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         AppDelegate.shared = self
+        DiagnosticsService.shared.logAppLaunch()
 
         // Apply dock icon preference
         applyDockIconPreference()
@@ -140,6 +141,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationWillTerminate(_ notification: Notification) {
         unregisterAllHotKeys()
         announcementTimer?.invalidate()
+        DiagnosticsService.shared.logAppTerminate()
     }
 
     // MARK: - Dock Icon Management

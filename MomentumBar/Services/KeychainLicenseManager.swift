@@ -32,6 +32,7 @@ final class KeychainLicenseManager {
         case encodingFailed
         case decodingFailed
         case unexpectedData
+        case missingEntitlement
 
         var errorDescription: String? {
             switch self {
@@ -47,6 +48,8 @@ final class KeychainLicenseManager {
                 return "Failed to decode data"
             case .unexpectedData:
                 return "Unexpected data format"
+            case .missingEntitlement:
+                return "Keychain access is not available in this build."
             }
         }
     }
@@ -160,6 +163,10 @@ final class KeychainLicenseManager {
     // MARK: - Private Keychain Operations
 
     private func storeData(_ data: Data, forKey key: KeychainKey) throws {
+        guard EntitlementService.shared.hasKeychainAccess else {
+            throw KeychainError.missingEntitlement
+        }
+
         // First, try to delete any existing item
         let deleteQuery: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
@@ -185,6 +192,10 @@ final class KeychainLicenseManager {
     }
 
     private func retrieveData(forKey key: KeychainKey) throws -> Data? {
+        guard EntitlementService.shared.hasKeychainAccess else {
+            throw KeychainError.missingEntitlement
+        }
+
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: serviceName,
@@ -206,6 +217,10 @@ final class KeychainLicenseManager {
     }
 
     private func deleteData(forKey key: KeychainKey) throws {
+        guard EntitlementService.shared.hasKeychainAccess else {
+            throw KeychainError.missingEntitlement
+        }
+
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: serviceName,

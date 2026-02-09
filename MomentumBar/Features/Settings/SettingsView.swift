@@ -16,8 +16,7 @@ struct SettingsView: View {
         case calendar
         case display
         case theme
-        case license
-        case about
+        case account
     }
 
     var body: some View {
@@ -52,17 +51,11 @@ struct SettingsView: View {
                 }
                 .tag(Tabs.theme)
 
-            LicenseSettingsView()
+            AccountSettingsTab()
                 .tabItem {
-                    Label("License", systemImage: "key.fill")
+                    Label("Account", systemImage: "person.crop.circle")
                 }
-                .tag(Tabs.license)
-
-            AboutTab()
-                .tabItem {
-                    Label("About", systemImage: "info.circle")
-                }
-                .tag(Tabs.about)
+                .tag(Tabs.account)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
@@ -71,6 +64,8 @@ struct SettingsView: View {
 // MARK: - General Settings Tab
 struct GeneralSettingsTab: View {
     @State private var appState = AppState.shared
+    @State private var showResetConfirmation = false
+    @State private var resetResultMessage: String?
 
     var body: some View {
         Form {
@@ -111,6 +106,31 @@ struct GeneralSettingsTab: View {
                 ))
             }
 
+            Section("Widgets") {
+                if StorageService.shared.isAppGroupAvailable {
+                    Label("Widget sync is active", systemImage: "checkmark.circle.fill")
+                        .foregroundStyle(.green)
+                } else {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Label("Widget sync is unavailable", systemImage: "exclamationmark.triangle.fill")
+                            .foregroundStyle(.orange)
+                        Text("Install the official DMG build to enable App Group syncing for widgets.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+
+            Section("Diagnostics") {
+                Toggle("Enable local diagnostics logging", isOn: Binding(
+                    get: { appState.preferences.enableLocalDiagnostics },
+                    set: { appState.preferences.enableLocalDiagnostics = $0 }
+                ))
+                Text("Stores logs locally in Application Support. Nothing is sent externally.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
             Section("Keyboard Shortcuts") {
                 ShortcutRow(
                     label: "Toggle Popover",
@@ -131,10 +151,41 @@ struct GeneralSettingsTab: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
+
+            Section("Reset") {
+                if let message = resetResultMessage {
+                    Text(message)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                Button(role: .destructive) {
+                    showResetConfirmation = true
+                } label: {
+                    Label("Reset App Data", systemImage: "trash")
+                }
+            }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .formStyle(.grouped)
         .padding()
+        .alert("Reset App Data?", isPresented: $showResetConfirmation) {
+            Button("Reset", role: .destructive) {
+                resetAppData()
+            }
+            Button("Cancel", role: .cancel) { }
+        } message: {
+            Text("This clears preferences, time zones, groups, and license/trial info. The app will close afterward.")
+        }
+    }
+
+    private func resetAppData() {
+        StorageService.shared.resetAll()
+        try? KeychainLicenseManager.shared.clearAll()
+        resetResultMessage = "App data cleared. Please reopen MomentumBar."
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            NSApplication.shared.terminate(nil)
+        }
     }
 
     private func setLaunchAtLogin(_ enabled: Bool) {
@@ -772,6 +823,21 @@ struct AboutTab: View {
                     .padding(.vertical, 8)
 
                 VStack(spacing: 12) {
+                    HStack {
+                        Text("Update status")
+                            .font(.subheadline)
+                        Spacer()
+                        if let lastCheckedAt = updateService.lastCheckedAt {
+                            Text("Last checked \(lastCheckedAt, style: .time)")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        } else {
+                            Text("Not checked yet")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+
                     Button {
                         updateService.checkForUpdates()
                     } label: {
@@ -788,6 +854,17 @@ struct AboutTab: View {
                         get: { updateService.automaticallyChecksForUpdates },
                         set: { updateService.setAutomaticChecks($0) }
                     ))
+
+                    if let error = updateService.lastErrorMessage {
+                        HStack(spacing: 8) {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .foregroundStyle(.orange)
+                            Text(error)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    }
                 }
                 .padding(.horizontal)
 
@@ -886,6 +963,24 @@ struct AboutTab: View {
                 }
             }
             .padding()
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
+
+// MARK: - Account Settings Tab
+struct AccountSettingsTab: View {
+    var body: some View {
+        VStack(spacing: 16) {
+            LicenseSettingsView()
+                .padding(.top, 8)
+
+            Divider()
+                .padding(.horizontal)
+
+            AboutTab()
+                .padding(.horizontal)
+                .padding(.bottom, 16)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }

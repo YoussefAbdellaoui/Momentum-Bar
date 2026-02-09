@@ -13,7 +13,7 @@
 const express = require('express');
 const pool = require('../config/database');
 const { generateLicenseKey } = require('../utils/keygen');
-const { sendLicenseEmail } = require('../services/email');
+const { enqueueLicenseEmail } = require('../services/emailQueue');
 
 const router = express.Router();
 
@@ -99,6 +99,64 @@ router.post('/announcements', async (req, res) => {
     } catch (error) {
         console.error('Error creating announcement:', error);
         res.status(500).json({ error: 'Failed to create announcement' });
+    }
+});
+
+// ============================================
+// POST /admin/announcements/bulk - Create multiple announcements
+// ============================================
+router.post('/announcements/bulk', async (req, res) => {
+    try {
+        const { announcements } = req.body || {};
+
+        if (!Array.isArray(announcements) || announcements.length === 0) {
+            return res.status(400).json({ error: 'Announcements array is required' });
+        }
+
+        const client = await pool.connect();
+        try {
+            await client.query('BEGIN');
+
+            const created = [];
+            for (const entry of announcements) {
+                const {
+                    title,
+                    body,
+                    type = 'info',
+                    linkUrl,
+                    startsAt,
+                    endsAt,
+                    minAppVersion,
+                    maxAppVersion,
+                    isActive = true
+                } = entry || {};
+
+                if (!title || !body) {
+                    await client.query('ROLLBACK');
+                    return res.status(400).json({ error: 'Each announcement needs title and body' });
+                }
+
+                const result = await client.query(
+                    `INSERT INTO announcements
+                     (title, body, type, link_url, starts_at, ends_at, min_app_version, max_app_version, is_active)
+                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+                     RETURNING *`,
+                    [title, body, type, linkUrl || null, startsAt || null, endsAt || null, minAppVersion || null, maxAppVersion || null, isActive]
+                );
+                created.push(result.rows[0]);
+            }
+
+            await client.query('COMMIT');
+            res.status(201).json({ announcements: created });
+        } catch (error) {
+            await client.query('ROLLBACK');
+            throw error;
+        } finally {
+            client.release();
+        }
+    } catch (error) {
+        console.error('Error creating announcements in bulk:', error);
+        res.status(500).json({ error: 'Failed to create announcements' });
     }
 });
 
@@ -312,15 +370,15 @@ router.post('/licenses', async (req, res) => {
 
         const license = result.rows[0];
 
-        // Send email if requested
+        // Enqueue email if requested
         if (sendEmail) {
-            await sendLicenseEmail(email, licenseKey, tier);
+            await enqueueLicenseEmail(email, licenseKey, tier);
         }
 
         res.status(201).json({
             success: true,
             license,
-            emailSent: sendEmail
+            emailQueued: sendEmail
         });
 
     } catch (error) {
@@ -535,16 +593,70 @@ router.post('/licenses/:id/resend-email', async (req, res) => {
 
         const { email, license_key, tier } = license.rows[0];
 
-        await sendLicenseEmail(email, license_key, tier);
+        await enqueueLicenseEmail(email, license_key, tier);
 
         res.json({
             success: true,
-            message: `License email resent to ${email}`
+            message: `License email queued for ${email}`
         });
 
     } catch (error) {
         console.error('Error resending email:', error);
         res.status(500).json({ error: 'Failed to resend email' });
+    }
+});
+
+// ============================================
+// GET /admin/email-jobs - List email jobs
+// ============================================
+router.get('/email-jobs', async (req, res) => {
+    try {
+        const { status = 'failed', limit = 100 } = req.query;
+        const allowed = ['pending', 'retry', 'sending', 'sent', 'failed'];
+        const effectiveStatus = allowed.includes(status) ? status : 'failed';
+
+        const result = await pool.query(
+            `SELECT *
+             FROM email_jobs
+             WHERE status = $1
+             ORDER BY updated_at DESC
+             LIMIT $2`,
+            [effectiveStatus, Math.min(parseInt(limit, 10) || 100, 200)]
+        );
+
+        res.json({ jobs: result.rows });
+    } catch (error) {
+        console.error('Error listing email jobs:', error);
+        res.status(500).json({ error: 'Failed to list email jobs' });
+    }
+});
+
+// ============================================
+// POST /admin/email-jobs/:id/requeue - Requeue a failed job
+// ============================================
+router.post('/email-jobs/:id/requeue', async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const result = await pool.query(
+            `UPDATE email_jobs
+             SET status = 'retry',
+                 attempts = 0,
+                 next_attempt_at = NOW(),
+                 last_error = NULL
+             WHERE id = $1
+             RETURNING *`,
+            [id]
+        );
+
+        if (!result.rows[0]) {
+            return res.status(404).json({ error: 'Email job not found' });
+        }
+
+        res.json({ job: result.rows[0] });
+    } catch (error) {
+        console.error('Error requeueing email job:', error);
+        res.status(500).json({ error: 'Failed to requeue email job' });
     }
 });
 

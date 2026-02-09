@@ -43,18 +43,24 @@ final class AnnouncementService {
             throw DecodingError.dataCorruptedError(in: container, debugDescription: "Invalid date: \(value)")
         }
 
-        if let cached = loadCachedAnnouncements() {
+        if OnboardingService.shared.hasCompletedOnboarding,
+           let cached = loadCachedAnnouncements() {
             announcements = cached
         }
     }
 
     var unreadCount: Int {
+        guard OnboardingService.shared.hasCompletedOnboarding else { return 0 }
         _ = seenVersion
         let seen = loadSeenIds()
         return announcements.filter { !seen.contains($0.id) }.count
     }
 
     func refreshAnnouncements(force: Bool = false) async -> [Announcement] {
+        guard OnboardingService.shared.hasCompletedOnboarding else {
+            announcements = []
+            return []
+        }
         let shouldFetch = force || shouldFetchAnnouncements()
         if shouldFetch, let fetched = await fetchAnnouncements() {
             announcements = fetched
@@ -83,6 +89,12 @@ final class AnnouncementService {
         var seen = loadSeenIds()
         seen.insert(announcement.id)
         defaults.set(Array(seen), forKey: Keys.seenAnnouncementIds)
+        seenVersion += 1
+    }
+
+    func markAllSeen() {
+        let allIds = announcements.map { $0.id }
+        defaults.set(allIds, forKey: Keys.seenAnnouncementIds)
         seenVersion += 1
     }
 

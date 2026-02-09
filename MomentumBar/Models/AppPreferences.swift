@@ -59,6 +59,9 @@ struct AppPreferences: Codable, Equatable {
     // Time Scroller
     var defaultScrollerRange: Int = 24 // hours
 
+    // Diagnostics
+    var enableLocalDiagnostics: Bool = false
+
     static let `default` = AppPreferences()
 }
 

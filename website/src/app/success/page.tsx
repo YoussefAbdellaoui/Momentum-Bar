@@ -81,7 +81,7 @@ function SuccessContent() {
               </li>
               <li className="flex items-start">
                 <span className="text-green-400 mr-2">✓</span>
-                If you don't receive it within 30 minutes, contact support
+                If you don&apos;t receive it within 30 minutes, contact support
               </li>
             </ul>
           </div>
@@ -148,7 +148,7 @@ function SuccessContent() {
             </li>
             <li className="flex items-start">
               <span className="text-green-400 mr-3 mt-1">✓</span>
-              <span>If you don't see it, check your spam/junk folder</span>
+              <span>If you don&apos;t see it, check your spam/junk folder</span>
             </li>
             <li className="flex items-start">
               <span className="text-green-400 mr-3 mt-1">✓</span>

@@ -12,6 +12,7 @@ struct AnnouncementListView: View {
     @State private var isLoading = false
     @State private var errorMessage: String?
     let onClose: (() -> Void)?
+    @State private var onboardingService = OnboardingService.shared
 
     var body: some View {
         VStack(spacing: 0) {
@@ -45,6 +46,14 @@ struct AnnouncementListView: View {
                     .controlSize(.small)
             }
 
+            if onboardingService.hasCompletedOnboarding && service.unreadCount > 0 {
+                Button("Mark all read") {
+                    service.markAllSeen()
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+            }
+
             if let onClose {
                 Button {
                     onClose()
@@ -76,7 +85,16 @@ struct AnnouncementListView: View {
                     .padding(.bottom, 8)
             }
 
-            if service.announcements.isEmpty {
+            if !onboardingService.hasCompletedOnboarding {
+                VStack(spacing: 8) {
+                    Text("Announcements available after onboarding")
+                        .foregroundStyle(.secondary)
+                    Text("Finish onboarding to start receiving updates and news.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if service.announcements.isEmpty {
                 VStack(spacing: 8) {
                     Text("No announcements yet.")
                         .foregroundStyle(.secondary)
@@ -105,6 +123,7 @@ struct AnnouncementListView: View {
     }
 
     private func refresh(force: Bool = false) {
+        guard onboardingService.hasCompletedOnboarding else { return }
         isLoading = true
         errorMessage = nil
         Task { @MainActor in

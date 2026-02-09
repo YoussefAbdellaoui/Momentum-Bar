@@ -15,6 +15,7 @@ const licenseRoutes = require('./routes/license');
 const webhookRoutes = require('./routes/webhooks');
 const adminRoutes = require('./routes/admin');
 const announcementRoutes = require('./routes/announcements');
+const { startEmailQueue } = require('./services/emailQueue');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -64,6 +65,7 @@ app.use((err, req, res, next) => {
 app.listen(PORT, () => {
     console.log(`MomentumBar License Server running on port ${PORT}`);
     console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+    startEmailQueue();
 });
 
 module.exports = app;

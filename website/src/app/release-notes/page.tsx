@@ -7,6 +7,19 @@ export default function ReleaseNotesIndex() {
         <p className="text-white/60 mt-2">
           Latest updates are linked from individual release pages.
         </p>
+
+        <div className="mt-8 rounded-2xl border border-white/10 bg-white/5 p-6">
+          <h2 className="text-xl font-semibold">Release feed</h2>
+          <p className="text-white/60 mt-2">
+            The app reads updates from our Sparkle appcast feed.
+          </p>
+          <a
+            href="/appcast.xml"
+            className="inline-flex mt-4 items-center gap-2 rounded-lg bg-white text-slate-900 px-4 py-2 font-semibold"
+          >
+            View appcast.xml
+          </a>
+        </div>
       </div>
     </main>
   )

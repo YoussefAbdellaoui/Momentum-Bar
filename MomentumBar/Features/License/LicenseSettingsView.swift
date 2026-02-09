@@ -14,8 +14,23 @@ struct LicenseSettingsView: View {
     @State private var activationMessage: String = ""
     @State private var isActivationSuccess: Bool = false
 
+    private var hasKeychainEntitlement: Bool {
+        EntitlementService.shared.hasKeychainAccess
+    }
+
     var body: some View {
         Form {
+            if !hasKeychainEntitlement {
+                Section {
+                    HStack(alignment: .top, spacing: 8) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundStyle(.orange)
+                        Text("Keychain access isn’t available in this build. Please reinstall the official DMG to activate or store licenses.")
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+
             // Status Section
             Section {
                 LicenseStatusRow(status: licenseService.currentStatus)
@@ -69,7 +84,7 @@ struct LicenseSettingsView: View {
                             Text("Deactivate This Machine")
                         }
                     }
-                    .disabled(licenseService.isLoading)
+                    .disabled(licenseService.isLoading || !hasKeychainEntitlement)
                 }
             }
 
@@ -95,7 +110,7 @@ struct LicenseSettingsView: View {
                             }
                         }
                         .buttonStyle(.borderedProminent)
-                        .disabled(licenseKeyInput.isEmpty || licenseService.isLoading)
+                        .disabled(licenseKeyInput.isEmpty || licenseService.isLoading || !hasKeychainEntitlement)
                     }
                 }
                 .padding(.vertical, 4)

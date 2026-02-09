@@ -23,6 +23,8 @@ final class CalendarService: ObservableObject {
     @Published var isLoading = false
     @Published var overlaps: [MeetingOverlap] = []
     @Published var bufferWarnings: [String: BufferWarning] = [:]
+    @Published var lastSyncAt: Date?
+    @Published var lastErrorMessage: String?
 
     private var canReadEvents: Bool {
         if authorizationStatus == .fullAccess {
@@ -158,6 +160,8 @@ final class CalendarService: ObservableObject {
         if canReadEvents {
             loadCalendars()
             fetchUpcomingEvents()
+        } else {
+            lastErrorMessage = "Calendar access not granted."
         }
     }
 
@@ -185,6 +189,7 @@ final class CalendarService: ObservableObject {
             return granted
         } catch {
             print("Calendar access request failed: \(error)")
+            lastErrorMessage = "Calendar access request failed."
             return false
         }
     }
@@ -206,6 +211,7 @@ final class CalendarService: ObservableObject {
         guard canReadEvents else { return }
 
         isLoading = true
+        lastErrorMessage = nil
 
         let calendars: [EKCalendar]?
         if let ids = calendarIDs, !ids.isEmpty {
@@ -241,6 +247,7 @@ final class CalendarService: ObservableObject {
         }
 
         isLoading = false
+        lastSyncAt = Date()
     }
 
     func fetchRecentEvents(hours: Int = 2) -> [CalendarEvent] {

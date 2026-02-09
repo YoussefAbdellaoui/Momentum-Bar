@@ -8,7 +8,7 @@ const express = require('express');
 const { Webhook } = require('standardwebhooks');
 const pool = require('../config/database');
 const { generateLicenseKey } = require('../utils/keygen');
-const { sendLicenseEmail } = require('../services/email');
+const { enqueueLicenseEmail } = require('../services/emailQueue');
 
 const router = express.Router();
 
@@ -132,10 +132,10 @@ async function handlePaymentSucceeded(event) {
 
         console.log(`License created: ${licenseKey} for ${email} (${finalTier})`);
 
-        // Send license email
-        await sendLicenseEmail(email, licenseKey, finalTier);
+        // Enqueue license email
+        await enqueueLicenseEmail(email, licenseKey, finalTier);
 
-        console.log(`License email sent to ${email}`);
+        console.log(`License email queued for ${email}`);
 
     } catch (error) {
         if (error.code === '23505') {

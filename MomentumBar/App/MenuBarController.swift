@@ -22,6 +22,10 @@ class MenuBarController {
     private var upcomingMeetingsCount: Int = 0
     private var nextMeeting: CalendarEvent?
     private(set) var isPinned: Bool = false
+    private var lastDisplayText: String = ""
+    private var lastShowIcon: Bool = false
+    private var lastBadgeLabel: String?
+    private var currentTimerInterval: TimeInterval = 1.0
 
     init() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
@@ -92,6 +96,11 @@ class MenuBarController {
 
     // MARK: - Menu Bar Timer
     private func startMenuBarTimer() {
+        timer?.invalidate()
+
+        let preferences = StorageService.shared.loadPreferences()
+        currentTimerInterval = preferences.showSeconds ? 1.0 : 30.0
+
         // Align to the next second
         let now = Date()
         let nextSecond = ceil(now.timeIntervalSinceReferenceDate)
@@ -99,7 +108,7 @@ class MenuBarController {
 
         DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
             self?.updateMenuBarDisplay()
-            self?.timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
+            self?.timer = Timer.scheduledTimer(withTimeInterval: self?.currentTimerInterval ?? 1.0, repeats: true) { [weak self] _ in
                 self?.updateMenuBarDisplay()
             }
             if let timer = self?.timer {
@@ -151,7 +160,13 @@ class MenuBarController {
         NotificationCenter.default.publisher(for: UserDefaults.didChangeNotification)
             .debounce(for: .milliseconds(100), scheduler: RunLoop.main)
             .sink { [weak self] _ in
-                self?.updateMenuBarDisplay()
+                guard let self = self else { return }
+                let preferences = StorageService.shared.loadPreferences()
+                let newInterval = preferences.showSeconds ? 1.0 : 30.0
+                if newInterval != self.currentTimerInterval {
+                    self.startMenuBarTimer()
+                }
+                self.updateMenuBarDisplay()
             }
             .store(in: &cancellables)
     }
@@ -213,7 +228,13 @@ class MenuBarController {
             button.imagePosition = .noImage
         }
 
-        button.title = displayText
+        if displayText == lastDisplayText && showIcon == lastShowIcon {
+            // No UI change needed
+        } else {
+            button.title = displayText
+            lastDisplayText = displayText
+            lastShowIcon = showIcon
+        }
 
         // Apply font for time display
         if !displayText.isEmpty {
@@ -226,9 +247,16 @@ class MenuBarController {
 
         // Update app badge for meeting count
         if preferences.showMeetingBadge && upcomingMeetingsCount > 0 {
-            NSApp.dockTile.badgeLabel = "\(upcomingMeetingsCount)"
+            let badge = "\(upcomingMeetingsCount)"
+            if badge != lastBadgeLabel {
+                NSApp.dockTile.badgeLabel = badge
+                lastBadgeLabel = badge
+            }
         } else {
-            NSApp.dockTile.badgeLabel = nil
+            if lastBadgeLabel != nil {
+                NSApp.dockTile.badgeLabel = nil
+                lastBadgeLabel = nil
+            }
         }
     }
 

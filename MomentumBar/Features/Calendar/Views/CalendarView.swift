@@ -18,7 +18,10 @@ struct CalendarView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            switch calendarService.authorizationStatus {
+            if !EntitlementService.shared.hasCalendarAccessEntitlement {
+                calendarEntitlementMissingView
+            } else {
+                switch calendarService.authorizationStatus {
             case .notDetermined:
                 requestAccessView
 
@@ -41,6 +44,7 @@ struct CalendarView: View {
 
             @unknown default:
                 requestAccessView
+                }
             }
         }
         .onAppear {
@@ -64,6 +68,30 @@ struct CalendarView: View {
                 set: { if !$0 { editingEvent = nil } }
             ))
         }
+    }
+
+    private var calendarEntitlementMissingView: some View {
+        VStack(spacing: 16) {
+            Spacer()
+
+            Image(systemName: "calendar.badge.exclamationmark")
+                .font(.system(size: 48))
+                .foregroundStyle(.orange)
+
+            Text("Calendar Unavailable")
+                .font(.title3)
+                .fontWeight(.medium)
+
+            Text("This build doesn’t include the calendar entitlement. Please reinstall the official DMG build to enable calendar access.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal)
+
+            Spacer()
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding()
     }
 
     private var legacyAccessView: some View {
@@ -156,6 +184,25 @@ struct CalendarView: View {
             .foregroundStyle(.blue)
 
             Spacer()
+
+            if let lastSyncAt = calendarService.lastSyncAt {
+                Text("Updated \(lastSyncAt, style: .time)")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            } else if calendarService.isLoading {
+                Text("Updating…")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+
+            Button {
+                calendarService.refresh()
+            } label: {
+                Image(systemName: "arrow.clockwise")
+                    .font(.body)
+            }
+            .buttonStyle(.plain)
+            .help("Refresh")
 
             // More options menu
             Menu {
@@ -280,6 +327,24 @@ struct CalendarView: View {
     private var eventsList: some View {
         ScrollView {
             LazyVStack(spacing: 8) {
+                if let error = calendarService.lastErrorMessage {
+                    HStack(spacing: 8) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundStyle(.orange)
+                        Text(error)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        Spacer()
+                    }
+                    .padding(10)
+                    .background(Color.orange.opacity(0.08))
+                    .cornerRadius(8)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(Color.orange.opacity(0.3), lineWidth: 1)
+                    )
+                }
+
                 // Warning banners
                 if calendarService.hasOverlaps {
                     OverlapWarningBanner(overlapCount: calendarService.overlaps.count)
