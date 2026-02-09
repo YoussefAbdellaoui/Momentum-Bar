@@ -11,6 +11,7 @@ VERSION="$1"
 APP_PATH="$2"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BG_PATH="$SCRIPT_DIR/dmg-background.png"
+ENTITLEMENTS_PATH="${ENTITLEMENTS_PATH:-"$SCRIPT_DIR/../MomentumBar/MomentumBar.entitlements"}"
 
 VOLUME_NAME="MomentumBar Installer ${VERSION}"
 DMG_RW="/tmp/MomentumBar-${VERSION}-rw.dmg"
@@ -21,6 +22,35 @@ STAGING_DIR="/tmp/MomentumBarDmgRoot"
 
 rm -rf "$STAGING_DIR" "$MOUNT_DIR" "$DMG_RW" "$DMG_FINAL"
 mkdir -p "$STAGING_DIR"
+
+if [[ -n "${SIGN_IDENTITY:-}" ]]; then
+  # Re-sign Sparkle nested binaries with hardened runtime + timestamp
+  SPARKLE_ROOT="$APP_PATH/Contents/Frameworks/Sparkle.framework/Versions/B"
+  if [[ -d "$SPARKLE_ROOT" ]]; then
+    for BIN in \
+      "$SPARKLE_ROOT/Autoupdate" \
+      "$SPARKLE_ROOT/Updater.app" \
+      "$SPARKLE_ROOT/XPCServices/Downloader.xpc" \
+      "$SPARKLE_ROOT/XPCServices/Installer.xpc" \
+      "$SPARKLE_ROOT/Sparkle"
+    do
+      if [[ -e "$BIN" ]]; then
+        codesign --force --options runtime --timestamp --sign "$SIGN_IDENTITY" "$BIN"
+      fi
+    done
+  fi
+
+  # Re-sign the app with entitlements (required for calendar access)
+  if [[ -f "$ENTITLEMENTS_PATH" ]]; then
+    codesign --force --options runtime --timestamp \
+      --entitlements "$ENTITLEMENTS_PATH" \
+      --sign "$SIGN_IDENTITY" \
+      "$APP_PATH"
+  else
+    echo "Entitlements not found at $ENTITLEMENTS_PATH"
+    exit 1
+  fi
+fi
 
 ditto --noqtn --norsrc --noextattr "$APP_PATH" "$STAGING_DIR/MomentumBar.app"
 ln -s /Applications "$STAGING_DIR/Applications"
